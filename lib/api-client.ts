@@ -171,66 +171,70 @@ export const ApiClient = {
 
   // POST /scenario
   async runScenario(params: OutbreakScenarioParams): Promise<OutbreakScenarioResult> {
-    if (!CONFIG.USE_MOCK) {
-      const res = await fetch(`${CONFIG.BASE_URL}/scenario`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(params),
-      });
-      if (!res.ok) throw new Error("Failed to execute outbreak scenario");
-      return res.json();
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 250));
-
-    // Increase demand by specified percentage for relevant records
-    const multiplier = 1 + params.demand_increase_pct / 100;
-    const affectedIds: string[] = [];
-
-    currentSnapshot = currentSnapshot.map((r) => {
-      const matchesDisease = r.disease_class === params.disease_class;
-      const matchesState = !params.states || params.states.includes(r.state);
-
-      if (matchesDisease && matchesState) {
-        affectedIds.push(r.phc_id);
-        const newDailyDemand = Math.round(r.daily_demand * multiplier);
-        const newDaysOfCover = Number((r.stock / newDailyDemand).toFixed(1));
-        let newRisk = r.risk_level;
-        if (newDaysOfCover <= 3.0) newRisk = "Critical";
-        else if (newDaysOfCover <= 7.0) newRisk = "High";
-        else if (newDaysOfCover <= 14.0) newRisk = "Medium";
-        else newRisk = "Low";
-
-        return {
-          ...r,
-          daily_demand: newDailyDemand,
-          days_of_cover: newDaysOfCover,
-          risk_level: newRisk,
-        };
-      }
-      return r;
+    const res = await fetch(`/api/scenario`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
     });
-
-    const updatedKpi = computeKpiSummary(currentSnapshot);
-
-    activeScenario = {
-      scenario_id: `SCN-${Date.now().toString().slice(-4)}`,
-      is_active: true,
-      title: `Simulated Outbreak: +${params.demand_increase_pct}% ${params.disease_class} surge`,
-      description: `Projected outbreak simulation over ${params.horizon_days} days. Demand elevated by ${params.demand_increase_pct}%.`,
-      projected_surge_label: `Projected: +${params.demand_increase_pct}% cases in ${params.horizon_days} days`,
-      updated_kpi: updatedKpi,
-      critical_increase_count: currentSnapshot.filter((r) => r.days_of_cover <= 3.0).length,
-      affected_phc_ids: Array.from(new Set(affectedIds)),
-    };
-
-    return activeScenario;
+    if (!res.ok) throw new Error("Failed to execute outbreak scenario");
+    const result = await res.json();
+    activeScenario = result;
+    return result;
   },
 
   // Reset scenario back to live baseline
   async resetScenario(): Promise<void> {
-    currentSnapshot = [...INITIAL_SNAPSHOT_RECORDS];
+    await fetch(`/api/scenario?action=reset`, { method: "POST" });
     activeScenario = null;
+  },
+
+  // GET /alert
+  async getAlerts(): Promise<SupplyAlert[]> {
+    try {
+      const res = await fetch(`/api/alert`);
+      if (res.ok) {
+        return res.json();
+      }
+    } catch (err) {
+      console.warn("Failed to fetch alerts from API:", err);
+    }
+    return currentAlerts;
+  },
+
+  // POST /alert
+  async createAlert(alertData: Partial<SupplyAlert>): Promise<SupplyAlert> {
+    const res = await fetch(`/api/alert`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(alertData),
+    });
+    if (!res.ok) throw new Error("Failed to create emergency alert");
+    const data = await res.json();
+    return data.alert;
+  },
+
+  // Update Alert Status (Draft -> Sent -> Acknowledged)
+  async updateAlertStatus(id: string, status: 'Draft' | 'Sent' | 'Acknowledged'): Promise<SupplyAlert> {
+    const res = await fetch(`/api/alert`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update_status", id, status }),
+    });
+    if (!res.ok) throw new Error("Failed to update alert status");
+    const data = await res.json();
+    return data.alert;
+  },
+
+  // Translate Alert Message into target regional language
+  async translateAlert(alert: SupplyAlert, targetLanguage: string): Promise<SupplyAlert> {
+    const res = await fetch(`/api/alert`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "translate", alert, target_language: targetLanguage }),
+    });
+    if (!res.ok) throw new Error("Failed to translate alert message");
+    const data = await res.json();
+    return data.translated_alert;
   },
 
   // POST /plan
@@ -279,27 +283,6 @@ export const ApiClient = {
     });
     if (!res.ok) throw new Error("Failed to query Q&A agent");
     return res.json();
-  },
-
-  // POST /alert
-  async createAlert(alertData: Partial<SupplyAlert>): Promise<SupplyAlert> {
-    const newAlert: SupplyAlert = {
-      id: `ALT-${Date.now().toString().slice(-4)}`,
-      severity: alertData.severity || 'Critical',
-      title: alertData.title || 'Stock Shortage Notification',
-      state: alertData.state || 'Madhya Pradesh',
-      district: alertData.district || 'Dewas',
-      affected_phcs: alertData.affected_phcs || ['PHC-MP-001'],
-      medicine: alertData.medicine || 'Paracetamol 500mg tab',
-      days_of_cover: alertData.days_of_cover || 2.5,
-      recommended_action: alertData.recommended_action || 'Redistribute surplus inventory from adjacent facility',
-      full_message: alertData.full_message || 'Stock is running out within 3 days. Action requested.',
-      sms_text: alertData.sms_text || 'PHC Pulse alert: Stock low.',
-      status: 'Draft',
-      timestamp: 'Just now',
-    };
-    currentAlerts.unshift(newAlert);
-    return newAlert;
   },
 
   // GET /federated/metrics

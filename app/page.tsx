@@ -7,7 +7,8 @@ import { ApiClient } from '@/lib/api-client';
 import { TopBar } from '@/components/TopBar';
 import { LeftNavigation, NavigationViewId } from '@/components/LeftNavigation';
 import { CommandDashboard } from '@/components/dashboard/CommandDashboard';
-import { OutbreakScenarioResult, PhcMaster, SnapshotRecord } from '@/types/supply-chain';
+import { AlertsPage } from '@/components/alerts/AlertsPage';
+import { OutbreakScenarioResult, PhcMaster, SnapshotRecord, SupplyAlert } from '@/types/supply-chain';
 import {
   Sparkles,
   ArrowRight,
@@ -27,6 +28,7 @@ export default function AppShell() {
   const [activeView, setActiveView] = useState<NavigationViewId>('dashboard');
 
   const [activeScenario, setActiveScenario] = useState<OutbreakScenarioResult | null>(null);
+  const [initialAlertDraft, setInitialAlertDraft] = useState<Partial<SupplyAlert> | null>(null);
   const [demoStep, setDemoStep] = useState<number>(0);
   const [isDemoRunning, setIsDemoRunning] = useState<boolean>(false);
 
@@ -124,34 +126,32 @@ export default function AppShell() {
               <CommandDashboard
                 currentLanguage={currentLanguage}
                 currentRole={currentRole}
+                activeScenario={activeScenario}
+                onScenarioChange={setActiveScenario}
                 onNavigateToView={(v) => setActiveView(v)}
+                onSelectPhcForAction={(phc, item) => {
+                  if (item) {
+                    setInitialAlertDraft({
+                      title: `Critical Stockout Alert: ${item.medicine} at ${phc.phc_name}`,
+                      severity: item.risk_level,
+                      state: phc.state,
+                      district: phc.district,
+                      medicine: item.medicine,
+                      days_of_cover: item.days_of_cover,
+                      recommended_action: `Approve emergency redistribution to ${phc.phc_name} (${phc.district}).`,
+                    });
+                  }
+                }}
               />
             )}
 
-            {/* Stage 2 Placeholder: Outbreak Scenarios & Alerts */}
+            {/* View 2: Outbreak Scenarios & Alerts (Stage 2) */}
             {activeView === 'alerts' && (
-              <div className="p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-center max-w-2xl mx-auto my-8">
-                <div className="h-12 w-12 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto mb-4">
-                  <AlertTriangle className="h-6 w-6" />
-                </div>
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                  Stage 2 · Up Next for Review
-                </span>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-1">
-                  Outbreak Scenario & Emergency Alerts
-                </h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                  Stage 1 (App shell and Command Dashboard) is currently live and ready for your review. In Stage 2, you will be able to run dynamic disease class outbreak sliders (+10% to +200%), preview SMS dispatches (max 300 chars), and send WhatsApp alerts to district CMOs.
-                </p>
-                <div className="mt-6 flex items-center justify-center gap-3">
-                  <button
-                    onClick={() => setActiveView('dashboard')}
-                    className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs min-h-[44px]"
-                  >
-                    Return to Stage 1 Dashboard
-                  </button>
-                </div>
-              </div>
+              <AlertsPage
+                currentLanguage={currentLanguage}
+                initialAlertDraft={initialAlertDraft}
+                onClearInitialDraft={() => setInitialAlertDraft(null)}
+              />
             )}
 
             {/* Stage 3 Placeholder: Redistribution Planner */}

@@ -6,12 +6,14 @@ import {
   SnapshotRecord,
   PhcMaster,
   SupplyFilters,
+  OutbreakScenarioParams,
   OutbreakScenarioResult,
 } from '@/types/supply-chain';
 import { LanguageCode, UserRole } from '@/lib/config';
 import { TRANSLATIONS } from '@/lib/translations';
 import { ApiClient } from '@/lib/api-client';
 import { KpiStrip } from './KpiStrip';
+import { SimulateOutbreakPanel } from './SimulateOutbreakPanel';
 import { FiltersBar } from './FiltersBar';
 import { InteractiveMap } from './InteractiveMap';
 import { AtRiskTable } from './AtRiskTable';
@@ -21,6 +23,8 @@ import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 interface CommandDashboardProps {
   currentLanguage: LanguageCode;
   currentRole: UserRole;
+  activeScenario?: OutbreakScenarioResult | null;
+  onScenarioChange?: (scenario: OutbreakScenarioResult | null) => void;
   onNavigateToView?: (view: any) => void;
   onSelectPhcForAction?: (phc: PhcMaster, item?: SnapshotRecord) => void;
 }
@@ -28,6 +32,8 @@ interface CommandDashboardProps {
 export function CommandDashboard({
   currentLanguage,
   currentRole,
+  activeScenario: parentActiveScenario,
+  onScenarioChange,
   onNavigateToView,
   onSelectPhcForAction,
 }: CommandDashboardProps) {
@@ -40,7 +46,7 @@ export function CommandDashboard({
   const [records, setRecords] = useState<SnapshotRecord[]>([]);
   const [kpi, setKpi] = useState<KpiSummary | null>(null);
   const [phcMasters, setPhcMasters] = useState<PhcMaster[]>([]);
-  const [activeScenario, setActiveScenario] = useState<OutbreakScenarioResult | null>(null);
+  const activeScenario = parentActiveScenario || null;
 
   // Filters state
   const [filters, setFilters] = useState<SupplyFilters>({
@@ -96,7 +102,9 @@ export function CommandDashboard({
           setRecords(res.records);
           setKpi(res.kpi);
           setPhcMasters(res.phc_masters);
-          setActiveScenario(res.active_scenario);
+          if (res.active_scenario && !parentActiveScenario) {
+            onScenarioChange?.(res.active_scenario);
+          }
           setLoading(false);
         }
       } catch (err: any) {
@@ -112,7 +120,19 @@ export function CommandDashboard({
     return () => {
       isCancelled = true;
     };
-  }, [effectiveFilters, retryCount]);
+  }, [effectiveFilters, retryCount, onScenarioChange, parentActiveScenario]);
+
+  const handleRunScenario = async (params: OutbreakScenarioParams) => {
+    const result = await ApiClient.runScenario(params);
+    onScenarioChange?.(result);
+    setRetryCount((c) => c + 1); // Triggers re-fetch of snapshot from API
+  };
+
+  const handleResetScenario = async () => {
+    await ApiClient.resetScenario();
+    onScenarioChange?.(null);
+    setRetryCount((c) => c + 1);
+  };
 
   const handleDraftAlert = (itemOrPhc: any, deficitItem?: SnapshotRecord) => {
     if (onSelectPhcForAction) {
@@ -159,7 +179,15 @@ export function CommandDashboard({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* 1. KPI Strip */}
+      {/* 1. Outbreak Scenario Simulation Panel */}
+      <SimulateOutbreakPanel
+        currentLanguage={currentLanguage}
+        activeScenario={activeScenario}
+        onRunScenario={handleRunScenario}
+        onResetScenario={handleResetScenario}
+      />
+
+      {/* 2. KPI Strip */}
       {kpi && (
         <KpiStrip
           kpi={kpi}
@@ -169,7 +197,7 @@ export function CommandDashboard({
         />
       )}
 
-      {/* 2. Filters Bar */}
+      {/* 3. Filters Bar */}
       <FiltersBar
         filters={filters}
         onFilterChange={setFilters}

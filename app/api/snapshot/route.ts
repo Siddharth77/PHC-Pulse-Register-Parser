@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { scenarioStore, applyScenarioToRecords } from '@/lib/scenario-state';
 import { SnapshotRecord, PhcMaster, KpiSummary } from '@/types/supply-chain';
 
 export async function GET(req: NextRequest) {
@@ -27,6 +28,12 @@ export async function GET(req: NextRequest) {
     const snapshotData = JSON.parse(snapshotRaw);
     const phcs: PhcMaster[] = JSON.parse(phcsRaw);
     let records: SnapshotRecord[] = snapshotData.records || [];
+
+    // If a scenario is active, apply the multiplier inside the mock API layer
+    if (scenarioStore.params) {
+      const adjusted = applyScenarioToRecords(records, scenarioStore.params);
+      records = adjusted.records;
+    }
 
     // Filter logic
     if (state && state !== 'All') {
@@ -95,7 +102,7 @@ export async function GET(req: NextRequest) {
       records,
       kpi,
       phc_masters: phcs,
-      active_scenario: null,
+      active_scenario: scenarioStore.activeScenario,
     });
   } catch (error: any) {
     console.error('Error serving snapshot data:', error);
