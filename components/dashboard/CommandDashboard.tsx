@@ -189,12 +189,14 @@ export function CommandDashboard({
 
       {/* 2. KPI Strip */}
       {kpi && (
-        <KpiStrip
-          kpi={kpi}
-          currentLanguage={currentLanguage}
-          onFilterCriticalClick={() => setFilters((prev) => ({ ...prev, risk_level: 'Critical' }))}
-          onFilterExpiringClick={() => setFilters((prev) => ({ ...prev, risk_level: 'Low' }))}
-        />
+        <div data-demo-target="kpi-strip">
+          <KpiStrip
+            kpi={kpi}
+            currentLanguage={currentLanguage}
+            onFilterCriticalClick={() => setFilters((prev) => ({ ...prev, risk_level: 'Critical' }))}
+            onFilterExpiringClick={() => setFilters((prev) => ({ ...prev, risk_level: 'Low' }))}
+          />
+        </div>
       )}
 
       {/* 3. Filters Bar */}
@@ -207,15 +209,17 @@ export function CommandDashboard({
       />
 
       {/* 3. Interactive Map of India with Side Panel */}
-      <InteractiveMap
-        phcMasters={phcMasters}
-        records={records}
-        selectedState={filters.state || 'All'}
-        onStateSelect={(st) => setFilters((prev) => ({ ...prev, state: st, district: 'All' }))}
-        currentLanguage={currentLanguage}
-        onDraftAlertClick={(phc, item) => handleDraftAlert(phc, item)}
-        onFindSurplusClick={(phc, item) => handleFindSurplus(phc, item)}
-      />
+      <div data-demo-target="national-map">
+        <InteractiveMap
+          phcMasters={phcMasters}
+          records={records}
+          selectedState={filters.state || 'All'}
+          onStateSelect={(st) => setFilters((prev) => ({ ...prev, state: st, district: 'All' }))}
+          currentLanguage={currentLanguage}
+          onDraftAlertClick={(phc, item) => handleDraftAlert(phc, item)}
+          onFindSurplusClick={(phc, item) => handleFindSurplus(phc, item)}
+        />
+      </div>
 
       {/* 4. "Will Run Out Soon" Top 10 Acute Stockout List */}
       <AtRiskTable

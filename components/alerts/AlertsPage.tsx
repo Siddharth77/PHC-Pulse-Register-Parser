@@ -202,7 +202,7 @@ export function AlertsPage({
           No alerts match the selected filters.
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4" data-demo-target="alerts-list">
           {filteredAlerts.map((alert) => {
             const activeTab = getActiveTab(alert.id);
             const smsCharCount = alert.sms_text.length;

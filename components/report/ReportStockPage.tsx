@@ -544,7 +544,7 @@ export function ReportStockPage({
 
       {/* STEP 1: ENTRY SCREEN (3 Large Options - Min 64px Tall) */}
       {step === 'ENTRY' && (
-        <div className="space-y-4">
+        <div className="space-y-4" data-demo-target="report-form">
           {/* Privacy Note (Requirement 8) */}
           <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 flex items-center gap-2 font-medium">
             <Info className="h-4 w-4 text-teal-600 shrink-0" />

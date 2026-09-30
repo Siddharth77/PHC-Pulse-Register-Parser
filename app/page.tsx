@@ -14,6 +14,9 @@ import { ReportStockPage } from '@/components/report/ReportStockPage';
 import { FederatedNetworkPage } from '@/components/federated/FederatedNetworkPage';
 import { ImpactPage } from '@/components/impact/ImpactPage';
 import { AboutPage } from '@/components/about/AboutPage';
+import { WelcomeCard } from '@/components/demo/WelcomeCard';
+import { DemoOverlay } from '@/components/demo/DemoOverlay';
+import { DEMO_STEPS } from '@/lib/demo-script';
 import { OutbreakScenarioResult, PhcMaster, SnapshotRecord, SupplyAlert } from '@/types/supply-chain';
 import {
   Sparkles,
@@ -35,8 +38,16 @@ export default function AppShell() {
 
   const [activeScenario, setActiveScenario] = useState<OutbreakScenarioResult | null>(null);
   const [initialAlertDraft, setInitialAlertDraft] = useState<Partial<SupplyAlert> | null>(null);
-  const [demoStep, setDemoStep] = useState<number>(0);
+
+  // Demo walkthrough states
+  const [showWelcomeCard, setShowWelcomeCard] = useState<boolean>(true);
   const [isDemoRunning, setIsDemoRunning] = useState<boolean>(false);
+  const [demoStepIndex, setDemoStepIndex] = useState<number>(0);
+  const [demoIsPlaying, setDemoIsPlaying] = useState<boolean>(false);
+  const [demoPlaybackSpeed, setDemoPlaybackSpeed] = useState<number>(1);
+  const [demoAutoAdvance, setDemoAutoAdvance] = useState<boolean>(true);
+  const [demoToast, setDemoToast] = useState<string | null>(null);
+  const [demoStepError, setDemoStepError] = useState<string | null>(null);
 
   // Sync theme with document element
   useEffect(() => {
@@ -49,35 +60,103 @@ export default function AppShell() {
 
   const t = TRANSLATIONS[currentLanguage];
 
-  // Storyline Demo Trigger: Step-by-step automated demonstration
-  const handleTriggerDemo = async () => {
+  // Baseline Reset (Requirement 1)
+  const resetAppToBaseline = async () => {
     try {
-      setIsDemoRunning(true);
-      setDemoStep(1);
-      // Step 1: Switch to State/National Officer on Dashboard
-      setCurrentRole('state_national_officer');
-      setActiveView('dashboard');
+      await ApiClient.resetScenario();
+      await ApiClient.resetFederatedRounds();
+    } catch {
+      // Non-blocking
+    }
+    setActiveScenario(null);
+    setCurrentRole('state_national_officer');
+    setCurrentLanguage('en');
+    setActiveView('dashboard');
+    setDemoToast('Demo mode resets the app to its starting state.');
+    setTimeout(() => setDemoToast(null), 4000);
+  };
 
-      // Step 2: Trigger +40% fever/dengue surge scenario in Madhya Pradesh
-      const scenario = await ApiClient.runScenario({
-        disease_class: 'fever_vector',
-        states: ['Madhya Pradesh'],
-        demand_increase_pct: 40,
-        horizon_days: 10,
-      });
-      setActiveScenario(scenario);
-      setDemoStep(2);
-    } catch (err) {
-      console.error('Demo error:', err);
-    } finally {
-      setIsDemoRunning(false);
+  // Start Demo Mode
+  const handleStartDemo = async () => {
+    setShowWelcomeCard(false);
+    await resetAppToBaseline();
+    setIsDemoRunning(true);
+    setDemoStepIndex(0);
+    setDemoIsPlaying(true);
+    applyDemoStepState(0);
+  };
+
+  // Apply State for specific Demo Step
+  const applyDemoStepState = async (stepIdx: number) => {
+    setDemoStepError(null);
+    const stepDef = DEMO_STEPS[stepIdx];
+    if (!stepDef) return;
+
+    try {
+      setCurrentRole(stepDef.roleRequired);
+      setActiveView(stepDef.route);
+
+      // Step 2: Run Scenario
+      if (stepDef.requiresScenario && !activeScenario) {
+        const scenario = await ApiClient.runScenario({
+          disease_class: 'fever_vector',
+          states: ['Madhya Pradesh'],
+          demand_increase_pct: 40,
+          horizon_days: 10,
+        });
+        setActiveScenario(scenario);
+      }
+
+      // Step 8: Simulate federated round if on impact/federated
+      if (stepDef.id === 8) {
+        await ApiClient.simulateFederatedRound().catch(() => {});
+      }
+    } catch (err: any) {
+      setDemoStepError(err?.message || 'Step setup timeout');
+    }
+  };
+
+  // Handle Step Change
+  const handleDemoStepChange = (newIndex: number) => {
+    setDemoStepIndex(newIndex);
+    applyDemoStepState(newIndex);
+  };
+
+  // Auto-advance Timer
+  useEffect(() => {
+    if (!isDemoRunning || !demoIsPlaying || !demoAutoAdvance) return;
+
+    const currentStepDef = DEMO_STEPS[demoStepIndex];
+    if (!currentStepDef) return;
+
+    const duration = Math.max(3000, currentStepDef.durationMs / demoPlaybackSpeed);
+
+    const timer = setTimeout(() => {
+      if (demoStepIndex < DEMO_STEPS.length - 1) {
+        const nextIdx = demoStepIndex + 1;
+        setDemoStepIndex(nextIdx);
+        applyDemoStepState(nextIdx);
+      } else {
+        setDemoIsPlaying(false);
+      }
+    }, duration);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDemoRunning, demoIsPlaying, demoAutoAdvance, demoStepIndex, demoPlaybackSpeed]);
+
+  // Handle Exit Demo
+  const handleExitDemo = async (resetToLive: boolean) => {
+    setIsDemoRunning(false);
+    setDemoIsPlaying(false);
+    if (resetToLive) {
+      await resetAppToBaseline();
     }
   };
 
   const handleResetScenario = async () => {
     await ApiClient.resetScenario();
     setActiveScenario(null);
-    setDemoStep(0);
   };
 
   return (
@@ -93,8 +172,16 @@ export default function AppShell() {
           onThemeToggle={() => setIsDarkMode(!isDarkMode)}
           activeScenario={activeScenario}
           onResetScenario={handleResetScenario}
-          onTriggerDemo={handleTriggerDemo}
+          onTriggerDemo={handleStartDemo}
+          isDemoRunning={isDemoRunning}
         />
+
+        {/* Toast confirmation when resetting to demo baseline */}
+        {demoToast && (
+          <div className="bg-teal-600 text-white px-4 py-2 text-xs font-bold text-center shadow-md animate-fade-in z-50">
+            {demoToast}
+          </div>
+        )}
 
         {/* Demo Mode Notification Banner if Storyline Triggered */}
         {activeScenario && (
@@ -207,7 +294,7 @@ export default function AppShell() {
                 currentRole={currentRole}
                 scenarioActive={!!activeScenario}
                 onOpenScenarioModal={() => {
-                  handleTriggerDemo();
+                  handleStartDemo();
                 }}
               />
             )}
@@ -232,6 +319,36 @@ export default function AppShell() {
             </span>
           </div>
         </footer>
+
+        {/* Welcome Modal on First Load */}
+        {showWelcomeCard && !isDemoRunning && (
+          <WelcomeCard
+            onStartDemo={handleStartDemo}
+            onDismiss={() => setShowWelcomeCard(false)}
+          />
+        )}
+
+        {/* Active Demo Mode Walkthrough Overlay */}
+        {isDemoRunning && (
+          <DemoOverlay
+            currentStepIndex={demoStepIndex}
+            isPlaying={demoIsPlaying}
+            playbackSpeed={demoPlaybackSpeed}
+            autoAdvance={demoAutoAdvance}
+            onStepChange={handleDemoStepChange}
+            onTogglePlay={() => setDemoIsPlaying(!demoIsPlaying)}
+            onSetSpeed={setDemoPlaybackSpeed}
+            onToggleAutoAdvance={() => setDemoAutoAdvance(!demoAutoAdvance)}
+            onRestart={() => handleDemoStepChange(0)}
+            onExit={handleExitDemo}
+            onNavigateToAbout={() => {
+              setIsDemoRunning(false);
+              setActiveView('about');
+            }}
+            stepError={demoStepError}
+            onRetryStep={() => applyDemoStepState(demoStepIndex)}
+          />
+        )}
       </div>
     </div>
   );

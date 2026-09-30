@@ -231,7 +231,7 @@ export function ImpactPage({
       )}
 
       {/* 2. BEFORE / AFTER COMPARISON: 5 HEADLINE CARDS (Requirement 2) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div data-demo-target="impact-headline-cards" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Card A: Stock-out days per 100 PHC-medicine pairs */}
         <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs space-y-3">
           <div className="text-xs font-bold uppercase tracking-wider text-slate-400">

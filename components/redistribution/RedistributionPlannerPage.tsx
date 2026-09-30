@@ -419,18 +419,19 @@ export function RedistributionPlannerPage({
         </div>
       ) : (
         <div className="space-y-4">
-          {transfers.map((t) => (
-            <TransferCard
-              key={t.id}
-              transfer={t}
-              isSelected={selectedTransferId === t.id}
-              onSelect={() => setSelectedTransferId(t.id)}
-              onApprove={handleApprove}
-              onReject={handleReject}
-              onEditQuantity={handleEditQuantity}
-              onViewOrder={(item) => setActiveModalTransfer(item)}
-              currentRole={currentRole}
-            />
+          {transfers.map((t, idx) => (
+            <div key={t.id} data-demo-target={idx === 0 ? "transfer-card-top" : undefined}>
+              <TransferCard
+                transfer={t}
+                isSelected={selectedTransferId === t.id}
+                onSelect={() => setSelectedTransferId(t.id)}
+                onApprove={handleApprove}
+                onReject={handleReject}
+                onEditQuantity={handleEditQuantity}
+                onViewOrder={(item) => setActiveModalTransfer(item)}
+                currentRole={currentRole}
+              />
+            </div>
           ))}
         </div>
       )}

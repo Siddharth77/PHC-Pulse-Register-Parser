@@ -164,13 +164,15 @@ export function FederatedNetworkPage({
       </div>
 
       {/* 1. Network Topology Diagram */}
-      <NetworkTopologyDiagram
-        nodes={data.nodes}
-        currentRound={data.current_round}
-        isSimulating={isSimulating}
-        selectedState={selectedState}
-        onSelectState={setSelectedState}
-      />
+      <div data-demo-target="federated-diagram">
+        <NetworkTopologyDiagram
+          nodes={data.nodes}
+          currentRound={data.current_round}
+          isSimulating={isSimulating}
+          selectedState={selectedState}
+          onSelectState={setSelectedState}
+        />
+      </div>
 
       {/* 2. Training Round Control */}
       <TrainingRoundController

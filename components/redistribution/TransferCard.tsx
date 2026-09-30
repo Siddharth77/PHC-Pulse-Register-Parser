@@ -393,6 +393,7 @@ export function TransferCard({
                   onApprove(transfer.id);
                 }}
                 disabled={isSubmitting}
+                data-demo-target="transfer-approval-btn"
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs transition-colors min-h-[44px]"
               >
                 <ShieldCheck className="h-4 w-4" />

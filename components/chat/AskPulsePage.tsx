@@ -512,7 +512,7 @@ export function AskPulsePage({
                   <Bot className="h-5 w-5" />
                 </div>
 
-                <div className="flex-1 rounded-2xl rounded-tl-xs border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/70 p-4 sm:p-5 space-y-4 shadow-xs">
+                <div data-demo-target="chat-response" className="flex-1 rounded-2xl rounded-tl-xs border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/70 p-4 sm:p-5 space-y-4 shadow-xs">
                   {/* Scenario Active Banner Notice (Requirement 6) */}
                   {msg.isScenarioProjected && (
                     <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-800 text-[11px] font-bold">

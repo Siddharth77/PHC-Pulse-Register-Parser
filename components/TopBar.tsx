@@ -27,6 +27,7 @@ interface TopBarProps {
   activeScenario: OutbreakScenarioResult | null;
   onResetScenario?: () => void;
   onTriggerDemo?: () => void;
+  isDemoRunning?: boolean;
   lastUpdatedText?: string;
 }
 
@@ -40,6 +41,7 @@ export function TopBar({
   activeScenario,
   onResetScenario,
   onTriggerDemo,
+  isDemoRunning,
   lastUpdatedText = "Updated 2 min ago",
 }: TopBarProps) {
   const t = TRANSLATIONS[currentLanguage];
@@ -142,16 +144,24 @@ export function TopBar({
             </div>
           </div>
 
-          {/* Storyline Demo Button */}
-          {onTriggerDemo && (
-            <button
-              onClick={onTriggerDemo}
-              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs shadow-sm transition-colors min-h-[44px]"
-              title="Run 1-Click Storyline Demo"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>{t.demoMode}</span>
-            </button>
+          {/* Storyline Demo Button / Badge */}
+          {isDemoRunning ? (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-950 text-teal-300 font-extrabold text-xs border border-teal-800 animate-pulse">
+              <Sparkles className="h-3.5 w-3.5 text-teal-400" />
+              <span>Demo Mode Active</span>
+            </div>
+          ) : (
+            onTriggerDemo && (
+              <button
+                onClick={onTriggerDemo}
+                data-demo-target="top-bar-demo-btn"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs shadow-sm transition-colors min-h-[44px]"
+                title="Start 3-Minute Guided Demo"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Start demo</span>
+              </button>
+            )
           )}
 
           {/* Theme Toggle Button */}
