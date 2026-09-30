@@ -478,12 +478,12 @@ export function PitchDeckView() {
         <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
           <a
             href="/api/download-deck"
-            download="PHC_Pulse_Pitch_Deck.pptx"
+            download="PHC_Pulse_12_Slide_Pitch_Deck.md"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-teal-300 hover:text-teal-200 border border-slate-700 text-xs font-medium transition-colors"
-            title="Download PowerPoint presentation (.pptx) from docs folder"
+            title="Download full 12-slide Pitch Deck documentation (.md) from docs folder"
           >
             <Download className="h-3.5 w-3.5" />
-            <span>Download .PPTX</span>
+            <span>Download Deck (.MD)</span>
           </a>
 
           <div className="flex items-center gap-1.5 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-xs font-mono text-slate-300">

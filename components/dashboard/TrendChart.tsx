@@ -19,7 +19,17 @@ export function TrendChart({
 }: TrendChartProps) {
   const t = TRANSLATIONS[currentLanguage].charts;
 
-  const [activeMedicine, setActiveMedicine] = useState(selectedMedicine);
+  const [userSelectedMedicine, setUserSelectedMedicine] = useState<string | null>(null);
+  const [prevPropMedicine, setPrevPropMedicine] = useState(selectedMedicine);
+
+  // If parent prop changes, reset user selection override
+  if (selectedMedicine !== prevPropMedicine) {
+    setPrevPropMedicine(selectedMedicine);
+    setUserSelectedMedicine(null);
+  }
+
+  const activeMedicine = userSelectedMedicine || selectedMedicine;
+
   const data: TimeSeriesPoint[] = React.useMemo(
     () => generateTrendSeries(activeMedicine),
     [activeMedicine]
@@ -41,8 +51,17 @@ export function TrendChart({
   const chartW = width - padding.left - padding.right;
   const chartH = height - padding.top - padding.bottom;
 
-  // Max value calculation for Y scale
-  const maxVal = 6000;
+  // Dynamic Max value calculation for Y scale per medicine
+  const maxVal = React.useMemo(() => {
+    const maxDataPoint = Math.max(
+      ...data.map((pt) => Math.max(pt.actual_stock || 0, pt.upper_ci_95 || 0, pt.forecast_demand || 0, pt.stockout_threshold || 0))
+    );
+    if (maxDataPoint <= 50) return 50;
+    if (maxDataPoint <= 300) return 300;
+    if (maxDataPoint <= 2000) return 2000;
+    return Math.ceil(maxDataPoint * 1.15 / 500) * 500;
+  }, [data]);
+
   const minVal = 0;
 
   const scaleX = (index: number) => padding.left + (index / (data.length - 1)) * chartW;
@@ -84,8 +103,17 @@ export function TrendChart({
     'Z',
   ].join(' ');
 
-  // Danger threshold line Y
-  const thresholdY = scaleY(600); // 3-day critical buffer
+  // Dynamic Threshold line
+  const thresholdVal = data[0]?.stockout_threshold || 600;
+  const thresholdY = scaleY(thresholdVal);
+
+  // Dynamic grid ticks
+  const gridTicks = [
+    Math.round(maxVal * 0.25),
+    Math.round(maxVal * 0.5),
+    Math.round(maxVal * 0.75),
+    maxVal,
+  ];
 
   return (
     <div className="w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs p-4 flex flex-col justify-between">
@@ -99,7 +127,7 @@ export function TrendChart({
             </h2>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {t.subtitle}
+            {activeMedicine} · 30-Day Historical Trend & 14-Day ARIMA+ Forecast
           </p>
         </div>
 
@@ -109,7 +137,7 @@ export function TrendChart({
             <button
               key={m}
               onClick={() => {
-                setActiveMedicine(m);
+                setUserSelectedMedicine(m);
                 onMedicineSelect?.(m);
               }}
               className={`px-2.5 py-1 text-xs rounded-lg font-medium whitespace-nowrap transition-colors min-h-[36px] ${
@@ -131,7 +159,7 @@ export function TrendChart({
           className="w-full h-48 sm:h-56 select-none"
         >
           {/* Background Grid Lines */}
-          {[1000, 2500, 4000, 5500].map((val) => {
+          {gridTicks.map((val) => {
             const y = scaleY(val);
             return (
               <g key={val}>
@@ -176,7 +204,7 @@ export function TrendChart({
             fontWeight="bold"
             className="font-mono"
           >
-            Critical 3-Day Buffer (600)
+            Critical 3-Day Buffer ({thresholdVal})
           </text>
 
           {/* Today Divider Line */}

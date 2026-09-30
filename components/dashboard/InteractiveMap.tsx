@@ -46,6 +46,15 @@ export function InteractiveMap({
   const tRisks = TRANSLATIONS[currentLanguage].risks;
 
   const [activePhc, setActivePhc] = useState<PhcMaster | null>(null);
+  const [hoveredPhc, setHoveredPhc] = useState<PhcMaster | null>(null);
+  const [zoomFactor, setZoomFactor] = useState<number>(1.0);
+  const [prevSelectedState, setPrevSelectedState] = useState<string>(selectedState);
+
+  // Reset zoom factor when state filter changes using render pattern
+  if (selectedState !== prevSelectedState) {
+    setPrevSelectedState(selectedState);
+    setZoomFactor(1.0);
+  }
 
   // Group records by PHC to find worst risk per facility
   const phcRiskMap = React.useMemo(() => {
@@ -63,23 +72,61 @@ export function InteractiveMap({
     return map;
   }, [phcMasters, records]);
 
-  // Coordinate projections for India bounding box (approx lat 7 to 37, lon 68 to 97)
-  // We can zoom viewport based on selected state
-  const viewports: Record<string, { viewBox: string; label: string }> = {
-    All: { viewBox: "68 7 30 30", label: t.allIndia },
-    "Madhya Pradesh": { viewBox: "74 21 8 5", label: "Madhya Pradesh" },
-    "Maharashtra": { viewBox: "72 15 9 7", label: "Maharashtra" },
-    "Kerala": { viewBox: "74.5 8 4 5", label: "Kerala" },
-    "Assam": { viewBox: "89.5 24 7 4", label: "Assam" },
-  };
-
-  const currentViewport = viewports[selectedState] || viewports.All;
-
   // Transform lat/lon into SVG coordinate space
   // Longitude = X (68 to 98)
   // Latitude = Y (Inverted: India is 7N to 37N. In SVG, Y increases downwards, so Y = 38 - lat)
   const projectX = (lon: number) => lon;
   const projectY = (lat: number) => 38 - lat;
+
+  // Compute exact bounding box for each state dynamically from PHC coordinates
+  const stateBounds = React.useMemo(() => {
+    const bounds: Record<string, { minX: number; maxX: number; minY: number; maxY: number }> = {};
+
+    for (const phc of phcMasters) {
+      const x = projectX(phc.lon);
+      const y = projectY(phc.lat);
+      if (!bounds[phc.state]) {
+        bounds[phc.state] = { minX: x, maxX: x, minY: y, maxY: y };
+      } else {
+        bounds[phc.state].minX = Math.min(bounds[phc.state].minX, x);
+        bounds[phc.state].maxX = Math.max(bounds[phc.state].maxX, x);
+        bounds[phc.state].minY = Math.min(bounds[phc.state].minY, y);
+        bounds[phc.state].maxY = Math.max(bounds[phc.state].maxY, y);
+      }
+    }
+    return bounds;
+  }, [phcMasters]);
+
+  // Base ViewBox before zoom factor
+  const baseViewBox = React.useMemo(() => {
+    if (selectedState === 'All' || !stateBounds[selectedState]) {
+      return { x: 67, y: 2, w: 31, h: 30 };
+    }
+    const b = stateBounds[selectedState];
+    const width = b.maxX - b.minX;
+    const height = b.maxY - b.minY;
+    const padX = Math.max(1.8, width * 0.4);
+    const padY = Math.max(1.8, height * 0.4);
+
+    return {
+      x: b.minX - padX,
+      y: b.minY - padY,
+      w: width + padX * 2,
+      h: height + padY * 2,
+    };
+  }, [selectedState, stateBounds]);
+
+  // Calculate final ViewBox string applying zoomFactor
+  const currentViewBox = React.useMemo(() => {
+    const { x, y, w, h } = baseViewBox;
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const newW = w / zoomFactor;
+    const newH = h / zoomFactor;
+    const newX = cx - newW / 2;
+    const newY = cy - newH / 2;
+    return `${newX.toFixed(2)} ${newY.toFixed(2)} ${newW.toFixed(2)} ${newH.toFixed(2)}`;
+  }, [baseViewBox, zoomFactor]);
 
   // Active PHC records for side panel
   const activePhcData = activePhc ? phcRiskMap.get(activePhc.phc_id) : null;
@@ -126,7 +173,7 @@ export function InteractiveMap({
       <div className="relative w-full h-[460px] sm:h-[500px] bg-slate-50 dark:bg-slate-950 flex items-center justify-center overflow-hidden">
         {/* SVG Geographic Map Canvas */}
         <svg
-          viewBox={currentViewport.viewBox}
+          viewBox={currentViewBox}
           className="w-full h-full object-contain transition-all duration-500 ease-in-out select-none"
         >
           {/* Subtle Grid Lines */}
@@ -139,7 +186,7 @@ export function InteractiveMap({
 
           {/* India Boundary Outline (Stylized polygonal baseline) */}
           <path
-            d="M 74 31 L 72 26 L 69 22 L 71 18 L 74 15 L 77 12 L 81 8 L 88 10 L 93 11 L 96 14 L 94 17 L 91 21 L 88 23 L 85 27 L 80 30 Z"
+            d="M 74 30 L 72 25 L 68 20 L 70 14 L 73 11 L 76 7 L 78 3 L 80 5 L 88 10 L 96 11 L 94 14 L 91 18 L 88 22 L 85 26 L 80 29 Z"
             fill="none"
             stroke="currentColor"
             className="text-slate-300 dark:text-slate-800"
@@ -151,14 +198,14 @@ export function InteractiveMap({
           {/* 1. Madhya Pradesh (Central) */}
           <g className={`transition-opacity duration-300 ${selectedState === 'All' || selectedState === 'Madhya Pradesh' ? 'opacity-100' : 'opacity-30'}`}>
             <path
-              d="M 74 17 L 78 17 L 82 18 L 81 21 L 75 22 Z"
+              d="M 73.5 16.5 L 77.5 13.0 L 82.5 14.5 L 81.5 17.2 L 74.5 17.5 Z"
               fill="currentColor"
               className="text-orange-500/10 dark:text-orange-400/10 hover:text-orange-500/20 cursor-pointer"
               stroke="#F97316"
               strokeWidth="0.2"
               onClick={() => onStateSelect('Madhya Pradesh')}
             />
-            <text x="76.5" y="19" fontSize="0.7" fill="#F97316" fontWeight="bold">
+            <text x="76.5" y="15.5" fontSize="0.7" fill="#F97316" fontWeight="bold">
               Madhya Pradesh
             </text>
           </g>
@@ -166,14 +213,14 @@ export function InteractiveMap({
           {/* 2. Maharashtra (West) */}
           <g className={`transition-opacity duration-300 ${selectedState === 'All' || selectedState === 'Maharashtra' ? 'opacity-100' : 'opacity-30'}`}>
             <path
-              d="M 72.8 21.5 L 75 21.5 L 80 21 L 79 24 L 73.5 24 Z"
+              d="M 72.8 20.0 L 74.5 16.2 L 80.0 16.8 L 80.5 20.8 L 73.5 22.2 Z"
               fill="currentColor"
               className="text-teal-500/10 dark:text-teal-400/10 hover:text-teal-500/20 cursor-pointer"
               stroke="#0D9488"
               strokeWidth="0.2"
               onClick={() => onStateSelect('Maharashtra')}
             />
-            <text x="74.5" y="23" fontSize="0.7" fill="#0D9488" fontWeight="bold">
+            <text x="75.5" y="18.8" fontSize="0.7" fill="#0D9488" fontWeight="bold">
               Maharashtra
             </text>
           </g>
@@ -181,14 +228,14 @@ export function InteractiveMap({
           {/* 3. Kerala (South Coastal) */}
           <g className={`transition-opacity duration-300 ${selectedState === 'All' || selectedState === 'Kerala' ? 'opacity-100' : 'opacity-30'}`}>
             <path
-              d="M 75 29 L 76.5 28 L 77.2 30 L 76.2 32 Z"
+              d="M 74.8 25.8 L 76.2 25.5 L 77.3 28.5 L 76.2 29.8 L 75.0 28.2 Z"
               fill="currentColor"
               className="text-sky-500/10 dark:text-sky-400/10 hover:text-sky-500/20 cursor-pointer"
               stroke="#0284C7"
               strokeWidth="0.2"
               onClick={() => onStateSelect('Kerala')}
             />
-            <text x="75.2" y="30.5" fontSize="0.65" fill="#0284C7" fontWeight="bold">
+            <text x="75.2" y="27.2" fontSize="0.65" fill="#0284C7" fontWeight="bold">
               Kerala
             </text>
           </g>
@@ -196,14 +243,14 @@ export function InteractiveMap({
           {/* 4. Assam (North-East) */}
           <g className={`transition-opacity duration-300 ${selectedState === 'All' || selectedState === 'Assam' ? 'opacity-100' : 'opacity-30'}`}>
             <path
-              d="M 90 12 L 95 12 L 95.5 14 L 91.5 14 Z"
+              d="M 89.8 12.8 L 93.5 10.2 L 96.0 10.5 L 95.5 12.5 L 91.8 13.8 Z"
               fill="currentColor"
               className="text-indigo-500/10 dark:text-indigo-400/10 hover:text-indigo-500/20 cursor-pointer"
               stroke="#6366F1"
               strokeWidth="0.2"
               onClick={() => onStateSelect('Assam')}
             />
-            <text x="91.5" y="13.2" fontSize="0.7" fill="#6366F1" fontWeight="bold">
+            <text x="92.0" y="11.8" fontSize="0.7" fill="#6366F1" fontWeight="bold">
               Assam
             </text>
           </g>
@@ -216,6 +263,14 @@ export function InteractiveMap({
 
             const cx = projectX(phc.lon);
             const cy = projectY(phc.lat);
+
+            // Scale factor depending on zoom state
+            const isZoomed = selectedState !== 'All' || zoomFactor > 1.2;
+            const baseR = isZoomed ? 0.28 : 0.45;
+            const coreR = isZoomed ? 0.10 : 0.16;
+            const textFs = isZoomed ? 0.42 : 0.55;
+            const textOffsetX = isZoomed ? 0.35 : 0.55;
+            const textOffsetY = isZoomed ? 0.12 : 0.22;
 
             // Color pairings per Rule 3
             let fill = "#10B981"; // Low (green)
@@ -236,18 +291,20 @@ export function InteractiveMap({
                 key={phc.phc_id}
                 className="cursor-pointer group"
                 onClick={() => setActivePhc(phc)}
+                onMouseEnter={() => setHoveredPhc(phc)}
+                onMouseLeave={() => setHoveredPhc(null)}
               >
-                {/* Ping ring for critical stockouts */}
+                {/* Glowing pulse aura for critical stockouts */}
                 {risk === "Critical" && (
                   <circle
                     cx={cx}
                     cy={cy}
-                    r={isSelected ? "0.9" : "0.7"}
-                    fill="none"
+                    r={isSelected ? baseR * 2.2 : baseR * 1.8}
+                    fill="#EF4444"
+                    fillOpacity="0.25"
                     stroke="#EF4444"
-                    strokeWidth="0.1"
-                    className="animate-ping origin-center"
-                    opacity="0.8"
+                    strokeWidth={isZoomed ? "0.04" : "0.08"}
+                    className="animate-pulse"
                   />
                 )}
 
@@ -255,24 +312,27 @@ export function InteractiveMap({
                 <circle
                   cx={cx}
                   cy={cy}
-                  r={isSelected ? "0.6" : "0.4"}
+                  r={isSelected ? baseR * 1.4 : baseR}
                   fill={fill}
                   stroke={stroke}
-                  strokeWidth={isSelected ? "0.15" : "0.08"}
-                  className="transition-transform group-hover:scale-125"
+                  strokeWidth={isSelected ? (isZoomed ? "0.10" : "0.16") : (isZoomed ? "0.06" : "0.10")}
+                  className="transition-all duration-200 group-hover:opacity-90"
                 />
 
                 {/* Center Core dot */}
-                <circle cx={cx} cy={cy} r="0.15" fill="#FFFFFF" />
+                <circle cx={cx} cy={cy} r={coreR} fill="#FFFFFF" />
 
-                {/* Text Label on Zoomed or Selected */}
-                {(selectedState !== 'All' || isSelected) && (
+                {/* Text Label with crisp white/dark background outline for maximum legibility */}
+                {(isZoomed || isSelected || hoveredPhc?.phc_id === phc.phc_id) && (
                   <text
-                    x={cx + 0.5}
-                    y={cy + 0.2}
-                    fontSize="0.5"
-                    fill="currentColor"
-                    className="text-slate-800 dark:text-slate-200 font-bold pointer-events-none drop-shadow-xs"
+                    x={cx + textOffsetX}
+                    y={cy + textOffsetY}
+                    fontSize={textFs}
+                    fontWeight="800"
+                    stroke="currentColor"
+                    strokeWidth="0.08"
+                    paintOrder="stroke fill"
+                    className="fill-slate-900 text-white dark:fill-white dark:text-slate-900 pointer-events-none"
                   >
                     {phc.phc_name}
                   </text>
@@ -281,6 +341,49 @@ export function InteractiveMap({
             );
           })}
         </svg>
+
+        {/* Floating Zoom Controls Overlay (Top Right) */}
+        <div className="absolute top-3 right-3 flex flex-col gap-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg z-10">
+          <button
+            onClick={() => setZoomFactor((z) => Math.min(3.5, z * 1.3))}
+            className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-teal-50 dark:hover:bg-teal-950/60 text-slate-700 dark:text-slate-200 hover:text-teal-600 font-bold transition-all flex items-center justify-center min-h-[36px] min-w-[36px]"
+            title="Zoom In (+)"
+            aria-label="Zoom In"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setZoomFactor((z) => Math.max(0.8, z / 1.3))}
+            className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-teal-50 dark:hover:bg-teal-950/60 text-slate-700 dark:text-slate-200 hover:text-teal-600 font-bold transition-all flex items-center justify-center min-h-[36px] min-w-[36px]"
+            title="Zoom Out (-)"
+            aria-label="Zoom Out"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setZoomFactor(1.0)}
+            className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[10px] text-slate-700 dark:text-slate-300 font-bold font-mono transition-all flex items-center justify-center min-h-[28px]"
+            title="Reset Zoom"
+          >
+            {Math.round(zoomFactor * 100)}%
+          </button>
+        </div>
+
+        {/* Hover Tooltip Popup Overlay */}
+        {hoveredPhc && !activePhc && (
+          <div className="absolute top-4 left-4 bg-slate-900/95 text-white backdrop-blur-md p-3 rounded-xl border border-slate-700 shadow-xl text-xs z-20 pointer-events-none animate-in fade-in duration-150">
+            <div className="font-bold text-teal-300 text-sm">{hoveredPhc.phc_name}</div>
+            <div className="text-slate-300 text-[11px] mt-0.5">{hoveredPhc.district}, {hoveredPhc.state} · {hoveredPhc.type}</div>
+            <div className="mt-2 pt-2 border-t border-slate-800 flex items-center gap-3 text-[11px]">
+              <div>
+                Risk: <strong className={phcRiskMap.get(hoveredPhc.phc_id)?.worstRisk === 'Critical' ? 'text-rose-400 font-bold' : 'text-emerald-400'}>{phcRiskMap.get(hoveredPhc.phc_id)?.worstRisk || 'Low'}</strong>
+              </div>
+              <div>
+                Beds: <strong>{phcRiskMap.get(hoveredPhc.phc_id)?.records[0]?.beds_available || 2}/{hoveredPhc.total_beds}</strong>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Floating Map Legend (Bottom-Left) */}
         <div className="absolute bottom-3 left-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-md text-xs space-y-1.5 pointer-events-none">

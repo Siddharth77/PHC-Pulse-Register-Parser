@@ -757,17 +757,56 @@ export interface TimeSeriesPoint {
 }
 
 export function generateTrendSeries(medicineName = "Paracetamol 500mg tab"): TimeSeriesPoint[] {
+  const nameLower = medicineName.toLowerCase();
+  
+  // Configure medicine-specific baseline parameters
+  let baseBurn = 180;
+  let initialStock = 5400;
+  let threshold = 600;
+  let refillDay = 15;
+  let refillQty = 3000;
+  let surgeMultiplier = 1.0;
+
+  if (nameLower.includes("ors")) {
+    baseBurn = 90;
+    initialStock = 2200;
+    threshold = 300;
+    refillDay = 18;
+    refillQty = 1500;
+    surgeMultiplier = 1.25; // Acute diarrhoeal spike
+  } else if (nameLower.includes("amoxicillin")) {
+    baseBurn = 45;
+    initialStock = 1200;
+    threshold = 150;
+    refillDay = 12;
+    refillQty = 800;
+    surgeMultiplier = 1.15; // Respiratory seasonal trend
+  } else if (nameLower.includes("insulin") || nameLower.includes("metformin")) {
+    baseBurn = 6;
+    initialStock = 180;
+    threshold = 20;
+    refillDay = 20;
+    refillQty = 120;
+    surgeMultiplier = 1.05; // Steady chronic baseline
+  } else if (nameLower.includes("snake") || nameLower.includes("venom") || nameLower.includes("antivenom")) {
+    baseBurn = 2;
+    initialStock = 28;
+    threshold = 6;
+    refillDay = 14;
+    refillQty = 20;
+    surgeMultiplier = 1.35; // Emergency trauma spike
+  }
+
   const points: TimeSeriesPoint[] = [];
-  const baseBurn = 180;
-  let currentStock = 5400;
+  let currentStock = initialStock;
 
   // 30 Historical Days (-30 to Day 0)
   for (let i = 30; i >= 0; i--) {
     const dateObj = new Date();
     dateObj.setDate(dateObj.getDate() - i);
     const dateStr = dateObj.toISOString().slice(5, 10);
-    const dayBurn = Math.round(baseBurn + Math.sin(i * 0.4) * 35 + (i < 5 ? 40 : 0));
-    currentStock = Math.max(500, currentStock - dayBurn + (i === 15 ? 3000 : 0));
+    const dayBurn = Math.round((baseBurn + Math.sin(i * 0.4) * (baseBurn * 0.2) + (i < 5 ? baseBurn * 0.25 : 0)) * surgeMultiplier);
+    currentStock = Math.max(Math.round(threshold * 0.5), currentStock - dayBurn + (i === refillDay ? refillQty : 0));
 
     points.push({
       day_label: i === 0 ? "Today" : `-${i}d`,
@@ -775,7 +814,7 @@ export function generateTrendSeries(medicineName = "Paracetamol 500mg tab"): Tim
       is_forecast: false,
       actual_stock: currentStock,
       daily_consumption: dayBurn,
-      stockout_threshold: 600, // 3 days of cover
+      stockout_threshold: threshold,
     });
   }
 
@@ -785,9 +824,9 @@ export function generateTrendSeries(medicineName = "Paracetamol 500mg tab"): Tim
     const dateObj = new Date();
     dateObj.setDate(dateObj.getDate() + i);
     const dateStr = dateObj.toISOString().slice(5, 10);
-    const projectedBurn = Math.round(baseBurn + 30 + i * 8); // rising surge
+    const projectedBurn = Math.round((baseBurn + (i * (baseBurn * 0.05))) * surgeMultiplier);
     projectedStock = Math.max(0, projectedStock - projectedBurn);
-    const uncertainty = i * 25;
+    const uncertainty = Math.round(i * (baseBurn * 0.15));
 
     points.push({
       day_label: `+${i}d`,
@@ -796,7 +835,7 @@ export function generateTrendSeries(medicineName = "Paracetamol 500mg tab"): Tim
       forecast_demand: projectedStock,
       lower_ci_95: Math.max(0, projectedStock - uncertainty),
       upper_ci_95: projectedStock + uncertainty,
-      stockout_threshold: 600,
+      stockout_threshold: threshold,
     });
   }
 
