@@ -18,6 +18,7 @@ import {
   FederatedMetricsResponse,
   FederatedNodeMetric,
   FederatedHistoryPoint,
+  ImpactMetricsResponse,
 } from '@/types/supply-chain';
 import {
   PHC_MASTERS,
@@ -430,6 +431,13 @@ export const ApiClient = {
       headers: { "Content-Type": "application/json" },
     });
     if (!res.ok) throw new Error("Failed to reset federated training rounds");
+    return res.json();
+  },
+
+  // GET /api/impact
+  async getImpactMetrics(state: string = "All"): Promise<ImpactMetricsResponse> {
+    const res = await fetch(`/api/impact?state=${encodeURIComponent(state)}`);
+    if (!res.ok) throw new Error("Failed to fetch impact metrics");
     return res.json();
   },
 };

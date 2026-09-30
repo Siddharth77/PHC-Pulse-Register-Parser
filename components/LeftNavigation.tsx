@@ -9,6 +9,7 @@ import {
   ClipboardPen,
   Network,
   Info,
+  TrendingUp,
 } from 'lucide-react';
 import { LanguageCode } from '@/lib/config';
 import { TRANSLATIONS } from '@/lib/translations';
@@ -20,6 +21,7 @@ export type NavigationViewId =
   | 'ask'
   | 'report'
   | 'federated'
+  | 'impact'
   | 'about';
 
 interface LeftNavigationProps {
@@ -73,6 +75,11 @@ export function LeftNavigation({
       id: 'federated' as const,
       label: t.federated,
       icon: <Network className="h-5 w-5" />,
+    },
+    {
+      id: 'impact' as const,
+      label: t.impact,
+      icon: <TrendingUp className="h-5 w-5" />,
     },
     {
       id: 'about' as const,

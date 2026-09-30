@@ -25,6 +25,7 @@ export interface TranslationDictionary {
     ask: string;
     report: string;
     federated: string;
+    impact: string;
     about: string;
   };
   kpi: {
@@ -151,6 +152,7 @@ export const TRANSLATIONS: Record<LanguageCode, TranslationDictionary> = {
       ask: "Ask PHC Pulse",
       report: "Report Stock",
       federated: "Federated Network",
+      impact: "Simulated Impact",
       about: "About & Architecture",
     },
     kpi: {
@@ -276,6 +278,7 @@ export const TRANSLATIONS: Record<LanguageCode, TranslationDictionary> = {
       ask: "पीएचसी पल्स से पूछें",
       report: "स्टॉक रिपोर्ट करें",
       federated: "फेडेरेटेड नेटवर्क",
+      impact: "सिम्युलेटेड प्रभाव",
       about: "वास्तुकला और परिचय",
     },
     kpi: {
@@ -401,6 +404,7 @@ export const TRANSLATIONS: Record<LanguageCode, TranslationDictionary> = {
       ask: "पीएचसी पल्सला विचारा",
       report: "साठा नोंदवा",
       federated: "फेडेरेटेड नेटवर्क",
+      impact: "सिम्युलेटेड प्रभाव",
       about: "माहिती आणि रचना",
     },
     kpi: {
@@ -526,6 +530,7 @@ export const TRANSLATIONS: Record<LanguageCode, TranslationDictionary> = {
       ask: "ചോദിക്കൂ പി.എച്ച്.സി പൾസിനോട്",
       report: "സ്റ്റോക്ക് റിപ്പോർട്ട് ചെയ്യുക",
       federated: "ഫെഡറേറ്റഡ് നെറ്റ്‌വർക്ക്",
+      impact: "സ്വാധീനം (Impact)",
       about: "ആർക്കിടെക്ചർ വിവരണം",
     },
     kpi: {
@@ -651,6 +656,7 @@ export const TRANSLATIONS: Record<LanguageCode, TranslationDictionary> = {
       ask: "পিএইচচি পাল্ছক সোধক",
       report: "ঔষধ ৰিপৰ্ট কৰক",
       federated: "ফেডাৰেটেড নেটৱৰ্ক",
+      impact: "প্ৰভাৱ (Impact)",
       about: "বিৱৰণ আৰু আৰ্কিটেকচাৰ",
     },
     kpi: {

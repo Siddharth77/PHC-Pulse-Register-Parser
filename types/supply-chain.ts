@@ -182,6 +182,46 @@ export interface FederatedHistoryPoint {
   };
 }
 
+export interface ImpactMetricItem {
+  without?: number;
+  with?: number;
+  value?: number;
+  note: string;
+}
+
+export interface ImpactStateBreakdown {
+  state: string;
+  stockout_days_without: number;
+  stockout_days_with: number;
+}
+
+export interface ImpactStoryStep {
+  title: string;
+  text: string;
+}
+
+export interface ImpactWhoBenefits {
+  patients: string;
+  staff: string;
+  officers: string;
+}
+
+export interface ImpactMetricsResponse {
+  period: string;
+  is_simulation: boolean;
+  methodology_note: string;
+  metrics: {
+    stockout_days_per_100_pairs: ImpactMetricItem;
+    expired_stock_avoided_inr: ImpactMetricItem;
+    patient_trips_saved: ImpactMetricItem;
+    hours_warning_to_transfer: ImpactMetricItem;
+    critical_stockouts_in_outbreak: ImpactMetricItem;
+  };
+  by_state: ImpactStateBreakdown[];
+  story_steps: ImpactStoryStep[];
+  who_benefits: ImpactWhoBenefits;
+}
+
 export interface FederatedMetricsResponse {
   current_round: number;
   total_rounds: number;

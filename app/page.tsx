@@ -12,6 +12,8 @@ import { RedistributionPlannerPage } from '@/components/redistribution/Redistrib
 import { AskPulsePage } from '@/components/chat/AskPulsePage';
 import { ReportStockPage } from '@/components/report/ReportStockPage';
 import { FederatedNetworkPage } from '@/components/federated/FederatedNetworkPage';
+import { ImpactPage } from '@/components/impact/ImpactPage';
+import { AboutPage } from '@/components/about/AboutPage';
 import { OutbreakScenarioResult, PhcMaster, SnapshotRecord, SupplyAlert } from '@/types/supply-chain';
 import {
   Sparkles,
@@ -198,35 +200,25 @@ export default function AppShell() {
               />
             )}
 
-            {/* Stage 7 Placeholder: About */}
+            {/* View 7: Simulated Impact (Stage 7 Part A) */}
+            {activeView === 'impact' && (
+              <ImpactPage
+                currentLanguage={currentLanguage}
+                currentRole={currentRole}
+                scenarioActive={!!activeScenario}
+                onOpenScenarioModal={() => {
+                  handleTriggerDemo();
+                }}
+              />
+            )}
+
+            {/* View 8: About & Architecture (Stage 7 Part B) */}
             {activeView === 'about' && (
-              <div className="p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-center max-w-2xl mx-auto my-8">
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">
-                  Stage 7 · Documentation
-                </span>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-1">
-                  About PHC Pulse & National Scaling Roadmap
-                </h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                  Full system architecture (Cloud Run, BigQuery, Gemini, Firebase) and evaluation pitch deck documentation.
-                </p>
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                  <a
-                    href="/api/download-deck"
-                    download="PHC_Pulse_Pitch_Deck.pptx"
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-xs min-h-[44px]"
-                  >
-                    <Download className="h-4 w-4" />
-                    <span>Download 12-Slide Pitch Deck (.PPTX)</span>
-                  </a>
-                  <button
-                    onClick={() => setActiveView('dashboard')}
-                    className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold min-h-[44px]"
-                  >
-                    Return to Stage 1 Dashboard
-                  </button>
-                </div>
-              </div>
+              <AboutPage
+                currentLanguage={currentLanguage}
+                currentRole={currentRole}
+                onNavigateToView={(v) => setActiveView(v)}
+              />
             )}
           </main>
         </div>
