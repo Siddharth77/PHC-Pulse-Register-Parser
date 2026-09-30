@@ -173,3 +173,44 @@ export interface FederatedMetrics {
     accuracy_pct: number;
   }[];
 }
+
+export interface AskQuestionParams {
+  question: string;
+  role: 'phc_staff' | 'district_officer' | 'state_national_officer';
+  scope?: {
+    states?: string[];
+    districts?: string[];
+    phc_id?: string;
+  };
+  language?: string;
+  scenario?: OutbreakScenarioResult | null;
+}
+
+export interface AskQuestionResponse {
+  answer_summary: string;
+  affected_phcs: {
+    phc_id: string;
+    phc_name: string;
+    district: string;
+    medicine: string;
+    days_of_cover: number;
+    risk_level: RiskLevel;
+  }[];
+  suggested_next_action: string | null;
+  confidence: 'High' | 'Medium' | 'Low';
+  confidence_note: string;
+  data_sources_used: string[];
+  not_enough_data?: boolean;
+  out_of_scope?: boolean;
+  missing_data_reason?: string;
+  scope_explanation?: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  question?: string;
+  response?: AskQuestionResponse;
+  timestamp: string;
+  isScenarioProjected?: boolean;
+}

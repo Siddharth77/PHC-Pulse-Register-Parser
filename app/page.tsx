@@ -9,6 +9,7 @@ import { LeftNavigation, NavigationViewId } from '@/components/LeftNavigation';
 import { CommandDashboard } from '@/components/dashboard/CommandDashboard';
 import { AlertsPage } from '@/components/alerts/AlertsPage';
 import { RedistributionPlannerPage } from '@/components/redistribution/RedistributionPlannerPage';
+import { AskPulsePage } from '@/components/chat/AskPulsePage';
 import { OutbreakScenarioResult, PhcMaster, SnapshotRecord, SupplyAlert } from '@/types/supply-chain';
 import {
   Sparkles,
@@ -164,25 +165,18 @@ export default function AppShell() {
               />
             )}
 
-            {/* Stage 4 Placeholder: Ask PHC Pulse */}
+            {/* View 4: Ask PHC Pulse Conversational Agent (Stage 4) */}
             {activeView === 'ask' && (
-              <div className="p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-center max-w-2xl mx-auto my-8">
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">
-                  Stage 4 · Up Next
-                </span>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-1">
-                  Ask PHC Pulse Conversational Agent
-                </h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                  Interactive Gemini-powered Q&A workbench with voice input, grounded data sources, and strict officer scoping rules.
-                </p>
-                <button
-                  onClick={() => setActiveView('dashboard')}
-                  className="mt-6 px-4 py-2 rounded-xl bg-teal-600 text-white font-bold text-xs min-h-[44px]"
-                >
-                  Return to Stage 1 Dashboard
-                </button>
-              </div>
+              <AskPulsePage
+                currentLanguage={currentLanguage}
+                currentRole={currentRole}
+                activeScenario={activeScenario}
+                onNavigateToView={(v) => setActiveView(v)}
+                onDraftAlertWithContext={(alertDraft) => {
+                  setInitialAlertDraft(alertDraft);
+                  setActiveView('alerts');
+                }}
+              />
             )}
 
             {/* Stage 5 Placeholder: Report Stock */}

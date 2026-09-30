@@ -10,6 +10,8 @@ import {
   PlanSummary,
   SupplyAlert,
   FederatedMetrics,
+  AskQuestionParams,
+  AskQuestionResponse,
 } from '@/types/supply-chain';
 import {
   PHC_MASTERS,
@@ -333,6 +335,20 @@ export const ApiClient = {
   },
 
   // POST /ask
+  async askQuestion(params: AskQuestionParams): Promise<AskQuestionResponse> {
+    const res = await fetch(`/api/ask`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.error || "Failed to query conversational agent");
+    }
+    return res.json();
+  },
+
+  // POST /qa-agent (Legacy endpoint)
   async askAgent(question: string, officerScope?: object): Promise<any> {
     const res = await fetch(`/api/qa-agent`, {
       method: "POST",
