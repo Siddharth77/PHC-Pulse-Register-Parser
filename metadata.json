@@ -1,0 +1,6 @@
+{
+  "name": "PHC Pulse Register Parser",
+  "description": "AI co-pilot and public health register parser for Primary Health Centres across federated health supply chains, converting messy registers, bed sheets, and voice notes into structured verified records.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
