@@ -1,0 +1,1100 @@
+openapi: 3.1.0
+info:
+  title: PHC Pulse API
+  version: 1.0.0
+  description: |
+    # PHC Pulse API Specifications
+    Federated Early-Warning and Supply Chain Redistribution Platform for India's Primary Health Centres (PHCs).
+    
+    ## System Architecture & Non-Negotiable Rules:
+    1. **Strict Service-LLM Separation**: Numerical calculations (demand forecasting, days of cover, min-cost optimization, federated metrics, impact simulations) are strictly computed by algorithmic Python microservices. Gemini models are exclusively used for reading/parsing register photos/voice notes, Q&A synthesis, transfer rationale generation, and drafting alerts.
+    2. **Role & Geographic Scoping**: Data access is scoped strictly before reaching Gemini or client responses based on user role (`PHC_STAFF`, `DISTRICT_OFFICER`, `STATE_OFFICER`). Patient-level records are never captured or transmitted.
+    3. **Data Sovereignty**: Physical drug redistribution is confined within state borders. Cross-state collaboration occurs exclusively through privacy-preserving Federated Model gradient updates.
+    4. **Idempotency**: All state-modifying operations (such as `POST /report`) require an `idempotency_key` header or payload attribute to guarantee safe retries.
+    5. **Environment Configuration**: Gemini model aliases are configured via environment variables (`GEMINI_MODEL_PARSER`, `GEMINI_MODEL_QA`, `GEMINI_MODEL_EXPLAIN`, `GEMINI_MODEL_ALERT`).
+    6. **Simulation Transparency**: All figures are synthetic, and federated learning is a simulation.
+
+servers:
+  - url: /api
+    description: Primary API Gateway / Local Express Proxy
+
+paths:
+  /snapshot:
+    get:
+      summary: Get Live Inventory Snapshot
+      description: Returns real-time stock levels, demand projections, and risk levels across PHCs filtered by role scope.
+      parameters:
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [Madhya Pradesh, Maharashtra, Kerala, Assam]
+        - name: district
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: medicine
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: risk
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/RiskLevel'
+      responses:
+        '200':
+          description: Snapshot records retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SnapshotRecord'
+        '400':
+          $ref: '#/components/responses/400Error'
+
+  /scenario:
+    post:
+      summary: Run Outbreak Demand Projection Scenario
+      description: Simulates an outbreak disease surge (e.g. +40% fever surge), recomputing days of cover and risk levels across target geography.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OutbreakScenarioRequest'
+      responses:
+        '200':
+          description: Outbreak scenario executed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutbreakScenarioResult'
+
+  /alert:
+    post:
+      summary: Draft Emergency Early Warning Alert
+      description: Generates a drafted alert with instant SMS text (max 300 chars) for district officers using Gemini 3.8 Flash.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertDraftRequest'
+      responses:
+        '200':
+          description: Alert drafted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alert'
+
+  /plan:
+    post:
+      summary: Generate Min-Cost Redistribution Plan
+      description: Computes optimal inter-facility transfers using OR-Tools min-cost flow. Generates plain-language rationales via Gemini.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanRequest'
+      responses:
+        '200':
+          description: Plan generated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+
+  /plan/{id}/approve:
+    post:
+      summary: Approve Transfer Order
+      description: Authorizes a pending transfer order. Keeps human in the loop before dispatch.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                approved_by:
+                  type: string
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Transfer approved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfer'
+
+  /plan/{id}/reject:
+    post:
+      summary: Reject Transfer Order
+      description: Rejects a transfer order with reason.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                rejected_by:
+                  type: string
+      responses:
+        '200':
+          description: Transfer rejected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfer'
+
+  /plan/{id}/edit:
+    post:
+      summary: Edit Transfer Quantity
+      description: Adjusts transfer quantity. Returns warning if source drops below 7 days of cover or exceeds stock.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new_quantity]
+              properties:
+                new_quantity:
+                  type: number
+      responses:
+        '200':
+          description: Quantity updated with safety audit warnings.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transfer:
+                    $ref: '#/components/schemas/Transfer'
+                  warnings:
+                    type: array
+                    items:
+                      type: string
+
+  /ask:
+    post:
+      summary: Ask Grounded Natural Language Question
+      description: Answers supply chain inquiries grounded strictly in verified snapshot data. Refuses out-of-scope or patient questions.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskRequest'
+      responses:
+        '200':
+          description: Grounded answer generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AskResponse'
+
+  /parse:
+    post:
+      summary: Parse Register Photo, Audio, or Text
+      description: Extracts medicine stock rows, vacant beds, and staff count from physical registers or voice transcripts.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [phc_id]
+              properties:
+                phc_id:
+                  type: string
+                language:
+                  type: string
+                image:
+                  type: string
+                  format: binary
+                transcript:
+                  type: string
+                text:
+                  type: string
+      responses:
+        '200':
+          description: Register parsed successfully into structured JSON.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParseResponse'
+
+  /report:
+    post:
+      summary: Submit Confirmed Last-Mile Stock Report
+      description: Idempotent submission of confirmed inventory updates. Recomputes live snapshot state.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockReportSubmitPayload'
+      responses:
+        '200':
+          description: Stock report persisted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockReportSubmitResponse'
+
+  /federated/metrics:
+    get:
+      summary: Get Federated Learning Metrics
+      description: Returns per-state model MAPE metrics across training rounds without exposing raw patient data.
+      responses:
+        '200':
+          description: Federated metrics retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FederatedMetrics'
+
+  /federated/round:
+    post:
+      summary: Simulate One Federated Training Round
+      description: Aggregates weight deltas across state nodes and updates accuracy metrics.
+      responses:
+        '200':
+          description: Training round completed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FederatedMetrics'
+
+  /federated/reset:
+    post:
+      summary: Reset Federated Simulation
+      description: Resets training rounds to Round 0 baseline.
+      responses:
+        '200':
+          description: Federated simulation reset.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FederatedMetrics'
+
+  /impact:
+    get:
+      summary: Get Simulated Impact Telemetry
+      description: Returns comparative performance metrics comparing static supply chains vs PHC Pulse AI redistribution.
+      parameters:
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Impact metrics retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Impact'
+
+  /health:
+    get:
+      summary: System Health Check
+      description: Returns health status of backend microservices and databases.
+      responses:
+        '200':
+          description: System healthy.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    example: "2026-09-30T00:00:00Z"
+                  services:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                        example: online
+                      gemini_api:
+                        type: string
+                        example: online
+
+  /config:
+    get:
+      summary: Get System Runtime Configuration
+      description: Returns environment configuration including Gemini model aliases and simulation flags.
+      responses:
+        '200':
+          description: Runtime configuration retrieved.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gemini_model_parser:
+                    type: string
+                    example: gemini-3.8-flash
+                  gemini_model_qa:
+                    type: string
+                    example: gemini-3.8-flash
+                  gemini_model_explain:
+                    type: string
+                    example: gemini-3.8-flash
+                  gemini_model_alert:
+                    type: string
+                    example: gemini-3.8-flash
+                  is_simulation:
+                    type: boolean
+                    example: true
+                  use_local_data:
+                    type: boolean
+                    example: true
+
+components:
+  schemas:
+    RiskLevel:
+      type: string
+      enum: [Low, Medium, High, Critical]
+      description: |
+        Risk level threshold based on days_of_cover:
+        - Critical: <= 3.0 days
+        - High: <= 7.0 days
+        - Medium: <= 14.0 days
+        - Low: > 14.0 days
+
+    DiseaseClass:
+      type: string
+      enum: [fever_vector, diarrhoeal, respiratory, chronic_metabolic, emergency_trauma]
+
+    SnapshotRecord:
+      type: object
+      required:
+        - phc_id
+        - phc_name
+        - state
+        - district
+        - medicine
+        - disease_class
+        - stock
+        - unit
+        - daily_demand
+        - days_of_cover
+        - risk_level
+        - nearest_expiry
+        - cold_chain
+        - beds_available
+        - staff_present
+        - staff_sanctioned
+      properties:
+        phc_id:
+          type: string
+          example: PHC_MP_DEW_001
+        phc_name:
+          type: string
+          example: Rampur PHC
+        state:
+          type: string
+          example: Madhya Pradesh
+        district:
+          type: string
+          example: Dewas
+        medicine:
+          type: string
+          example: Paracetamol 500mg tab
+        disease_class:
+          $ref: '#/components/schemas/DiseaseClass'
+        stock:
+          type: number
+          example: 120
+        unit:
+          type: string
+          example: tablets
+        daily_demand:
+          type: number
+          example: 30
+        days_of_cover:
+          type: number
+          example: 4.0
+        risk_level:
+          $ref: '#/components/schemas/RiskLevel'
+        nearest_expiry:
+          type: string
+          example: "2026-11-15"
+        cold_chain:
+          type: boolean
+          example: false
+        beds_available:
+          type: number
+          example: 4
+        staff_present:
+          type: number
+          example: 3
+        staff_sanctioned:
+          type: number
+          example: 5
+
+    ParseStockRow:
+      type: object
+      required:
+        - medicine
+        - quantity
+        - unit
+        - expiry_date
+        - raw_text
+        - confidence
+        - needs_review
+      properties:
+        medicine:
+          type: string
+          example: ORS Sachet 21.8g
+        quantity:
+          type: number
+          nullable: true
+          example: 150
+        unit:
+          type: string
+          nullable: true
+          example: sachets
+        expiry_date:
+          type: string
+          nullable: true
+          example: "2027-01-30"
+        raw_text:
+          type: string
+          example: ORS - 150 pkts exp 01/27
+        confidence:
+          type: number
+          example: 0.95
+        needs_review:
+          type: boolean
+          example: false
+
+    ParseResponse:
+      type: object
+      required:
+        - phc_id
+        - report_date
+        - stock
+        - beds_available
+        - staff_present
+        - warnings
+      properties:
+        phc_id:
+          type: string
+          nullable: true
+          example: PHC_MP_DEW_001
+        report_date:
+          type: string
+          nullable: true
+          example: "2026-09-30"
+        stock:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParseStockRow'
+        beds_available:
+          type: number
+          nullable: true
+          example: 4
+        staff_present:
+          type: number
+          nullable: true
+          example: 3
+        warnings:
+          type: array
+          items:
+            type: string
+
+    AskRequest:
+      type: object
+      required: [question, role]
+      properties:
+        question:
+          type: string
+          example: Which districts will run out of paracetamol next week?
+        role:
+          type: string
+          enum: [phc_staff, district_officer, state_national_officer]
+        scope:
+          type: object
+          properties:
+            states:
+              type: array
+              items:
+                type: string
+            districts:
+              type: array
+              items:
+                type: string
+        language:
+          type: string
+          example: en
+
+    AskResponse:
+      type: object
+      required:
+        - answer_summary
+        - affected_phcs
+        - suggested_next_action
+        - confidence
+        - confidence_note
+        - data_sources_used
+      properties:
+        answer_summary:
+          type: string
+          example: Dewas district in Madhya Pradesh has 2 PHCs with under 4 days of cover.
+        affected_phcs:
+          type: array
+          items:
+            type: object
+            required: [phc_id, phc_name, district, medicine, days_of_cover, risk_level]
+            properties:
+              phc_id:
+                type: string
+              phc_name:
+                type: string
+              district:
+                type: string
+              medicine:
+                type: string
+              days_of_cover:
+                type: number
+              risk_level:
+                $ref: '#/components/schemas/RiskLevel'
+        suggested_next_action:
+          type: string
+          nullable: true
+          example: Trigger inter-facility transfer from Ujjain warehouse.
+        confidence:
+          type: string
+          enum: [High, Medium, Low]
+        confidence_note:
+          type: string
+          example: Verified against live inventory snapshot records.
+        data_sources_used:
+          type: array
+          items:
+            type: string
+
+    Alert:
+      type: object
+      required:
+        - alert_id
+        - severity
+        - title
+        - full_message
+        - sms_text
+        - short_text_local
+        - affected_phcs
+        - days_of_cover
+        - is_projection
+        - recommended_action
+      properties:
+        alert_id:
+          type: string
+          example: ALT_2026_0930_001
+        severity:
+          $ref: '#/components/schemas/RiskLevel'
+        title:
+          type: string
+          example: Critical Paracetamol Shortage
+        full_message:
+          type: string
+        sms_text:
+          type: string
+          maxLength: 300
+          example: "ALERT: Rampur PHC Paracetamol cover is 2.1d. Move 500 tabs from Ujjain WH."
+        short_text_local:
+          type: string
+        affected_phcs:
+          type: array
+          items:
+            type: string
+        days_of_cover:
+          type: number
+        is_projection:
+          type: boolean
+        recommended_action:
+          type: string
+
+    TransferStatus:
+      type: string
+      enum: [PENDING_APPROVAL, APPROVED, DISPATCHED, REJECTED]
+
+    Transfer:
+      type: object
+      required:
+        - transfer_id
+        - from_phc
+        - to_phc
+        - item
+        - quantity
+        - unit
+        - distance_km
+        - urgency
+        - explanation
+        - watch_out
+        - source_days_of_cover_before
+        - source_days_of_cover_after
+        - dest_days_of_cover_before
+        - dest_days_of_cover_after
+        - nearest_expiry
+        - cold_chain
+        - status
+      properties:
+        transfer_id:
+          type: string
+          example: TRF_2026_0930_001
+        from_phc:
+          type: string
+          example: WH_UJJ_001
+        to_phc:
+          type: string
+          example: PHC_MP_DEW_001
+        item:
+          type: string
+          example: Paracetamol 500mg tab
+        quantity:
+          type: number
+          example: 500
+        unit:
+          type: string
+          example: tablets
+        distance_km:
+          type: number
+          example: 34.5
+        urgency:
+          $ref: '#/components/schemas/RiskLevel'
+        explanation:
+          type: string
+          example: Move 500 Paracetamol tabs because Rampur runs out in 2.1 days.
+        watch_out:
+          type: array
+          items:
+            type: string
+          example: ["Near Expiry (45d)", "Cold Chain Required"]
+        source_days_of_cover_before:
+          type: number
+          example: 45.0
+        source_days_of_cover_after:
+          type: number
+          example: 38.0
+        dest_days_of_cover_before:
+          type: number
+          example: 2.1
+        dest_days_of_cover_after:
+          type: number
+          example: 18.5
+        nearest_expiry:
+          type: string
+          example: "2026-11-15"
+        cold_chain:
+          type: boolean
+          example: false
+        status:
+          $ref: '#/components/schemas/TransferStatus'
+
+    Plan:
+      type: object
+      required:
+        - plan_id
+        - generated_at
+        - transfers
+        - plan_summary
+        - estimated_stockout_days_avoided
+        - data_issues
+      properties:
+        plan_id:
+          type: string
+          example: PLN_2026_0930_001
+        generated_at:
+          type: string
+          example: "2026-09-30T10:15:00Z"
+        transfers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transfer'
+        plan_summary:
+          type: string
+          example: Min-cost optimization generated 4 transfers saving ~42 stockout days.
+        estimated_stockout_days_avoided:
+          type: number
+          example: 42.0
+        data_issues:
+          type: array
+          items:
+            type: string
+
+    FederatedNode:
+      type: object
+      required:
+        - state
+        - state_code
+        - phc_count
+        - last_round
+        - mape_local_only
+        - mape_federated
+        - pattern_note
+        - insight
+      properties:
+        state:
+          type: string
+          example: Madhya Pradesh
+        state_code:
+          type: string
+          example: MP
+        phc_count:
+          type: number
+          example: 50
+        last_round:
+          type: number
+          example: 3
+        mape_local_only:
+          type: number
+          example: 18.4
+        mape_federated:
+          type: number
+          example: 11.2
+        pattern_note:
+          type: string
+          example: Monsoon vector surge patterns
+        insight:
+          type: string
+          example: Shared model improved dengue prediction accuracy by +7.2%
+
+    FederatedMetrics:
+      type: object
+      required:
+        - current_round
+        - total_rounds
+        - nodes
+        - history
+        - shared_items
+        - never_shared_items
+        - is_simulation
+      properties:
+        current_round:
+          type: number
+          example: 3
+        total_rounds:
+          type: number
+          example: 10
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FederatedNode'
+        history:
+          type: array
+          items:
+            type: object
+            required: [round, mape_by_state, mape_baseline_by_state]
+            properties:
+              round:
+                type: number
+              mape_by_state:
+                type: object
+                additionalProperties:
+                  type: number
+              mape_baseline_by_state:
+                type: object
+                additionalProperties:
+                  type: number
+        shared_items:
+          type: array
+          items:
+            type: string
+          example: ["Model Gradient Delta Tensors", "Hyperparameter Weights"]
+        never_shared_items:
+          type: array
+          items:
+            type: string
+          example: ["Patient Names", "OPD Records", "Facility Micro-Logs"]
+        is_simulation:
+          type: boolean
+          example: true
+
+    Impact:
+      type: object
+      required:
+        - period
+        - is_simulation
+        - methodology_note
+        - metrics
+        - by_state
+        - story_steps
+        - who_benefits
+      properties:
+        period:
+          type: string
+          example: 90-Day Comparative Simulation
+        is_simulation:
+          type: boolean
+          example: true
+        methodology_note:
+          type: string
+          example: Simulated comparison between static reorder baseline and AI redistribution.
+        metrics:
+          type: object
+          required:
+            - stockout_days_per_100_pairs
+            - expired_stock_avoided_inr
+            - patient_trips_saved
+            - hours_warning_to_transfer
+            - critical_stockouts_in_outbreak
+          properties:
+            stockout_days_per_100_pairs:
+              type: object
+              required: [without, with, note]
+              properties:
+                without:
+                  type: number
+                  example: 42.6
+                with:
+                  type: number
+                  example: 8.4
+                note:
+                  type: string
+            expired_stock_avoided_inr:
+              type: object
+              required: [without, with, note]
+              properties:
+                without:
+                  type: number
+                  example: 1420000
+                with:
+                  type: number
+                  example: 210000
+                note:
+                  type: string
+            patient_trips_saved:
+              type: object
+              required: [value, note]
+              properties:
+                value:
+                  type: number
+                  example: 18450
+                note:
+                  type: string
+            hours_warning_to_transfer:
+              type: object
+              required: [without, with, note]
+              properties:
+                without:
+                  type: number
+                  example: 168.0
+                with:
+                  type: number
+                  example: 28.5
+                note:
+                  type: string
+            critical_stockouts_in_outbreak:
+              type: object
+              required: [without, with, note]
+              properties:
+                without:
+                  type: number
+                  example: 38
+                with:
+                  type: number
+                  example: 5
+                note:
+                  type: string
+        by_state:
+          type: array
+          items:
+            type: object
+            required: [state, stockout_days_without, stockout_days_with]
+            properties:
+              state:
+                type: string
+              stockout_days_without:
+                type: number
+              stockout_days_with:
+                type: number
+        story_steps:
+          type: array
+          items:
+            type: object
+            required: [title, text]
+            properties:
+              title:
+                type: string
+              text:
+                type: string
+        who_benefits:
+          type: object
+          required: [patients, staff, officers]
+          properties:
+            patients:
+              type: string
+            staff:
+              type: string
+            officers:
+              type: string
+
+    OutbreakScenarioRequest:
+      type: object
+      required: [disease_class, demand_increase_pct, horizon_days]
+      properties:
+        disease_class:
+          $ref: '#/components/schemas/DiseaseClass'
+        states:
+          type: array
+          items:
+            type: string
+        districts:
+          type: array
+          items:
+            type: string
+        demand_increase_pct:
+          type: number
+          example: 40
+        horizon_days:
+          type: number
+          example: 10
+
+    OutbreakScenarioResult:
+      type: object
+      required: [scenario_id, is_active, title, description, projected_surge_label, critical_increase_count, affected_phc_ids]
+      properties:
+        scenario_id:
+          type: string
+        is_active:
+          type: boolean
+        title:
+          type: string
+        description:
+          type: string
+        projected_surge_label:
+          type: string
+        critical_increase_count:
+          type: number
+        affected_phc_ids:
+          type: array
+          items:
+            type: string
+
+    AlertDraftRequest:
+      type: object
+      required: [phc_id, medicine]
+      properties:
+        phc_id:
+          type: string
+        medicine:
+          type: string
+        trigger:
+          type: string
+        language:
+          type: string
+
+    PlanRequest:
+      type: object
+      properties:
+        scope:
+          type: object
+          properties:
+            states:
+              type: array
+              items:
+                type: string
+            districts:
+              type: array
+              items:
+                type: string
+        scenario:
+          type: object
+
+    StockReportSubmitPayload:
+      type: object
+      required: [phc_id, confirmed_rows, idempotency_key]
+      properties:
+        phc_id:
+          type: string
+        confirmed_rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParseStockRow'
+        beds_available:
+          type: number
+          nullable: true
+        staff_present:
+          type: number
+          nullable: true
+        timestamp:
+          type: string
+        idempotency_key:
+          type: string
+
+    StockReportSubmitResponse:
+      type: object
+      required: [status, report_id]
+      properties:
+        status:
+          type: string
+          enum: [success, error]
+        report_id:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required: [error_code, message, timestamp]
+      properties:
+        error_code:
+          type: string
+          example: SCOPE_ACCESS_DENIED
+        message:
+          type: string
+          example: Access denied to requested district resources for role district_officer.
+        timestamp:
+          type: string
+          example: "2026-09-30T10:15:00Z"
+        details:
+          type: array
+          items:
+            type: string
+
+  responses:
+    400Error:
+      description: Invalid parameter or missing required fields.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
