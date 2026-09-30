@@ -18,6 +18,7 @@ import {
   FileText,
   Smartphone,
   ExternalLink,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { SupplyAlert, RiskLevel } from '@/types/supply-chain';
 import { LanguageCode } from '@/lib/config';
@@ -28,12 +29,14 @@ interface AlertsPageProps {
   currentLanguage: LanguageCode;
   initialAlertDraft?: Partial<SupplyAlert> | null;
   onClearInitialDraft?: () => void;
+  onNavigateToRedistribution?: (alert?: SupplyAlert) => void;
 }
 
 export function AlertsPage({
   currentLanguage,
   initialAlertDraft,
   onClearInitialDraft,
+  onNavigateToRedistribution,
 }: AlertsPageProps) {
   const t = TRANSLATIONS[currentLanguage];
 
@@ -356,7 +359,18 @@ export function AlertsPage({
                     Channel: NIC SMS Gateway & WhatsApp API
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {onNavigateToRedistribution && (
+                      <button
+                        onClick={() => onNavigateToRedistribution(alert)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/80 font-bold text-xs border border-teal-200 dark:border-teal-800 transition-colors min-h-[44px]"
+                        title="Open Redistribution Planner for this deficit facility"
+                      >
+                        <ArrowRightLeft className="h-3.5 w-3.5" />
+                        <span>Review Plan</span>
+                      </button>
+                    )}
+
                     <button
                       onClick={() =>
                         handleCopy(

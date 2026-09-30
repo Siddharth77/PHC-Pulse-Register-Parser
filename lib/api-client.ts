@@ -7,6 +7,7 @@ import {
   OutbreakScenarioParams,
   OutbreakScenarioResult,
   TransferPlanItem,
+  PlanSummary,
   SupplyAlert,
   FederatedMetrics,
 } from '@/types/supply-chain';
@@ -237,37 +238,98 @@ export const ApiClient = {
     return data.translated_alert;
   },
 
-  // POST /plan
-  async getPlan(): Promise<TransferPlanItem[]> {
-    if (!CONFIG.USE_MOCK) {
-      const res = await fetch(`${CONFIG.BASE_URL}/plan`, { method: "POST" });
-      if (!res.ok) throw new Error("Failed to generate transfer plan");
-      return res.json();
-    }
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    return [...currentPlans];
+  // GET or POST /plan
+  async getPlan(params?: { role?: string; district?: string; state?: string }): Promise<{
+    plan_id: string;
+    generated_at: string;
+    transfers: TransferPlanItem[];
+    summary: PlanSummary;
+    restricted?: boolean;
+    message?: string;
+  }> {
+    const cleanParams: Record<string, string> = {};
+    if (params?.role) cleanParams.role = params.role;
+    if (params?.district) cleanParams.district = params.district;
+    if (params?.state) cleanParams.state = params.state;
+    const query = new URLSearchParams(cleanParams).toString();
+
+    const res = await fetch(`/api/plan?${query}`);
+    if (!res.ok) throw new Error("Failed to load redistribution plan");
+    return res.json();
+  },
+
+  // POST /plan (re-generate)
+  async generatePlan(): Promise<{
+    plan_id: string;
+    generated_at: string;
+    transfers: TransferPlanItem[];
+    summary: PlanSummary;
+  }> {
+    const res = await fetch(`/api/plan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "generate" }),
+    });
+    if (!res.ok) throw new Error("Failed to re-generate redistribution plan");
+    return res.json();
   },
 
   // POST /plan/{id}/approve
-  async approvePlan(planId: string, officerName = "District Chief Medical Officer"): Promise<TransferPlanItem> {
-    if (!CONFIG.USE_MOCK) {
-      const res = await fetch(`${CONFIG.BASE_URL}/plan/${planId}/approve`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ officerName }),
-      });
-      if (!res.ok) throw new Error("Failed to approve transfer plan");
-      return res.json();
-    }
+  async approvePlan(planId: string, officerName = "District Chief Medical Officer"): Promise<{
+    transfer: TransferPlanItem;
+    summary: PlanSummary;
+  }> {
+    const res = await fetch(`/api/plan/${planId}/approve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ officerName }),
+    });
+    if (!res.ok) throw new Error("Failed to approve transfer plan");
+    return res.json();
+  },
 
-    const item = currentPlans.find((p) => p.id === planId);
-    if (!item) throw new Error(`Transfer plan item ${planId} not found`);
+  // POST /plan/{id}/reject
+  async rejectPlan(planId: string, reason?: string, officerName = "District Chief Medical Officer"): Promise<{
+    transfer: TransferPlanItem;
+    summary: PlanSummary;
+  }> {
+    const res = await fetch(`/api/plan/${planId}/reject`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason, officerName }),
+    });
+    if (!res.ok) throw new Error("Failed to reject transfer plan");
+    return res.json();
+  },
 
-    item.status = "APPROVED";
-    item.approved_at = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    item.approved_by = officerName;
+  // POST /plan/{id}/edit
+  async editPlanQuantity(planId: string, newQuantity: number, officerName = "District Chief Medical Officer"): Promise<{
+    transfer: TransferPlanItem;
+    warnings: string[];
+    summary: PlanSummary;
+  }> {
+    const res = await fetch(`/api/plan/${planId}/edit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newQuantity, officerName }),
+    });
+    if (!res.ok) throw new Error("Failed to edit transfer quantity");
+    return res.json();
+  },
 
-    return { ...item };
+  // POST /plan/approve-all
+  async approveAllPlans(approverName = "District Chief Medical Officer"): Promise<{
+    transfers: TransferPlanItem[];
+    summary: PlanSummary;
+    message: string;
+  }> {
+    const res = await fetch(`/api/plan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "approve_all", approverName }),
+    });
+    if (!res.ok) throw new Error("Failed to bulk approve transfers");
+    return res.json();
   },
 
   // POST /ask

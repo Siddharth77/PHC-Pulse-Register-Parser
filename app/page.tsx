@@ -8,6 +8,7 @@ import { TopBar } from '@/components/TopBar';
 import { LeftNavigation, NavigationViewId } from '@/components/LeftNavigation';
 import { CommandDashboard } from '@/components/dashboard/CommandDashboard';
 import { AlertsPage } from '@/components/alerts/AlertsPage';
+import { RedistributionPlannerPage } from '@/components/redistribution/RedistributionPlannerPage';
 import { OutbreakScenarioResult, PhcMaster, SnapshotRecord, SupplyAlert } from '@/types/supply-chain';
 import {
   Sparkles,
@@ -151,31 +152,16 @@ export default function AppShell() {
                 currentLanguage={currentLanguage}
                 initialAlertDraft={initialAlertDraft}
                 onClearInitialDraft={() => setInitialAlertDraft(null)}
+                onNavigateToRedistribution={() => setActiveView('redistribution')}
               />
             )}
 
-            {/* Stage 3 Placeholder: Redistribution Planner */}
+            {/* View 3: Redistribution Planner (Stage 3) */}
             {activeView === 'redistribution' && (
-              <div className="p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-center max-w-2xl mx-auto my-8">
-                <div className="h-12 w-12 rounded-2xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center mx-auto mb-4">
-                  <ShieldCheck className="h-6 w-6" />
-                </div>
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">
-                  Stage 3 · Up Next
-                </span>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-1">
-                  Redistribution Planner & One-Tap Approval
-                </h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                  Generates road-distance optimized transfers pairing deficit facilities with near-expiry surplus depots. Features printable transfer orders and Chief Medical Officer sign-off.
-                </p>
-                <button
-                  onClick={() => setActiveView('dashboard')}
-                  className="mt-6 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700 min-h-[44px]"
-                >
-                  Return to Stage 1 Dashboard
-                </button>
-              </div>
+              <RedistributionPlannerPage
+                currentLanguage={currentLanguage}
+                currentRole={currentRole}
+              />
             )}
 
             {/* Stage 4 Placeholder: Ask PHC Pulse */}

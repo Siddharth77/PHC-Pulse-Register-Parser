@@ -85,13 +85,28 @@ export interface OutbreakScenarioResult {
   affected_phc_ids: string[];
 }
 
+export interface TransferActivityLog {
+  id: string;
+  action: 'CREATED' | 'APPROVED' | 'REJECTED' | 'EDITED' | 'DISPATCHED';
+  actor: string;
+  timestamp: string;
+  note?: string;
+}
+
 export interface TransferPlanItem {
   id: string;
+  state: 'Madhya Pradesh' | 'Maharashtra' | 'Kerala' | 'Assam';
   from_id: string;
   from_name: string;
+  from_district: string;
   from_type: 'PHC' | 'Warehouse';
+  from_lat?: number;
+  from_lon?: number;
   to_id: string;
   to_name: string;
+  to_district: string;
+  to_lat?: number;
+  to_lon?: number;
   medicine: string;
   quantity: number;
   unit: string;
@@ -104,8 +119,22 @@ export interface TransferPlanItem {
   to_days_before: number;
   to_days_after: number;
   status: 'PENDING_APPROVAL' | 'APPROVED' | 'DISPATCHED' | 'REJECTED';
+  rejection_reason?: string;
   approved_at?: string;
   approved_by?: string;
+  estimated_stockout_days_avoided?: number;
+  estimated_value_inr?: number;
+  activity_logs?: TransferActivityLog[];
+}
+
+export interface PlanSummary {
+  total_transfers: number;
+  critical_high_count: number;
+  approved_count: number;
+  pending_count: number;
+  estimated_stockout_days_avoided: number;
+  estimated_value_inr_saved: number;
+  activity_history: TransferActivityLog[];
 }
 
 export interface SupplyAlert {
