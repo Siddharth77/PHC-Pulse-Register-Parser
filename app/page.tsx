@@ -11,6 +11,7 @@ import { AlertsPage } from '@/components/alerts/AlertsPage';
 import { RedistributionPlannerPage } from '@/components/redistribution/RedistributionPlannerPage';
 import { AskPulsePage } from '@/components/chat/AskPulsePage';
 import { ReportStockPage } from '@/components/report/ReportStockPage';
+import { FederatedNetworkPage } from '@/components/federated/FederatedNetworkPage';
 import { OutbreakScenarioResult, PhcMaster, SnapshotRecord, SupplyAlert } from '@/types/supply-chain';
 import {
   Sparkles,
@@ -123,7 +124,7 @@ export default function AppShell() {
           />
 
           {/* Central Workspace Canvas */}
-          <main className="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto">
+          <main className="flex-1 p-3 sm:p-6 lg:p-8 pb-20 lg:pb-8 overflow-y-auto">
             {/* View 1: Command Dashboard (Stage 1 Core) */}
             {activeView === 'dashboard' && (
               <CommandDashboard
@@ -189,25 +190,12 @@ export default function AppShell() {
               />
             )}
 
-            {/* Stage 6 Placeholder: Federated Network */}
+            {/* View 6: Federated Network (Stage 6) */}
             {activeView === 'federated' && (
-              <div className="p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-center max-w-2xl mx-auto my-8">
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">
-                  Stage 6 · Up Next
-                </span>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-1">
-                  Federated State Network & Privacy Architecture
-                </h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                  Visual node network across Madhya Pradesh, Maharashtra, Kerala, and Assam demonstrating encrypted model weight aggregation with zero raw patient data leakage.
-                </p>
-                <button
-                  onClick={() => setActiveView('dashboard')}
-                  className="mt-6 px-4 py-2 rounded-xl bg-teal-600 text-white font-bold text-xs min-h-[44px]"
-                >
-                  Return to Stage 1 Dashboard
-                </button>
-              </div>
+              <FederatedNetworkPage
+                currentLanguage={currentLanguage}
+                currentRole={currentRole}
+              />
             )}
 
             {/* Stage 7 Placeholder: About */}

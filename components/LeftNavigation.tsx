@@ -132,29 +132,31 @@ export function LeftNavigation({
       </aside>
 
       {/* Mobile Bottom Tab Bar (visible on mobile, hidden on lg) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-2 py-1 shadow-lg">
-        <div className="flex items-center justify-around">
-          {navItems.slice(0, 5).map((item) => {
+      <nav aria-label="Mobile Navigation" className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-1.5 py-1 shadow-lg">
+        <div className="flex items-center justify-between overflow-x-auto scrollbar-none gap-1 px-1">
+          {navItems.map((item) => {
             const isActive = activeView === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => onViewChange(item.id)}
-                className={`relative flex flex-col items-center justify-center p-2 rounded-lg text-xs font-medium min-h-[48px] min-w-[48px] transition-colors ${
+                className={`relative flex flex-col items-center justify-center p-1.5 rounded-xl text-xs font-medium min-h-[48px] min-w-[56px] shrink-0 transition-colors ${
                   isActive
-                    ? 'text-teal-700 dark:text-teal-400 font-bold'
-                    : 'text-slate-500 dark:text-slate-400'
+                    ? 'text-teal-700 dark:text-teal-300 font-extrabold bg-teal-50 dark:bg-teal-950/80 border border-teal-200 dark:border-teal-800'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 <div className="relative">
                   {item.icon}
                   {item.badge !== undefined && (
-                    <span className="absolute -top-1 -right-2 h-4 w-4 text-[9px] font-bold rounded-full bg-rose-500 text-white flex items-center justify-center">
+                    <span className="absolute -top-1 -right-2 h-4 w-4 text-[9px] font-bold rounded-full bg-rose-500 text-white flex items-center justify-center shadow-xs">
                       {item.badge}
                     </span>
                   )}
                 </div>
-                <span className="text-[10px] mt-1 truncate max-w-[64px]">{item.label}</span>
+                <span className="text-[10px] mt-0.5 whitespace-nowrap text-center leading-none">
+                  {item.label}
+                </span>
               </button>
             );
           })}

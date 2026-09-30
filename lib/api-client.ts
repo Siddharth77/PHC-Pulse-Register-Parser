@@ -15,6 +15,9 @@ import {
   ParseRegisterResult,
   StockReportSubmitPayload,
   StockReportSubmitResponse,
+  FederatedMetricsResponse,
+  FederatedNodeMetric,
+  FederatedHistoryPoint,
 } from '@/types/supply-chain';
 import {
   PHC_MASTERS,
@@ -403,13 +406,30 @@ export const ApiClient = {
     return res.json();
   },
 
-  // GET /federated/metrics
-  async getFederatedMetrics(): Promise<FederatedMetrics> {
-    if (!CONFIG.USE_MOCK) {
-      const res = await fetch(`${CONFIG.BASE_URL}/federated/metrics`);
-      if (!res.ok) throw new Error("Failed to fetch federated metrics");
-      return res.json();
-    }
-    return INITIAL_FEDERATED_METRICS;
+  // GET /api/federated/metrics
+  async getFederatedMetrics(): Promise<FederatedMetricsResponse> {
+    const res = await fetch(`/api/federated/metrics`);
+    if (!res.ok) throw new Error("Failed to fetch federated metrics");
+    return res.json();
+  },
+
+  // POST /api/federated/round
+  async simulateFederatedRound(): Promise<FederatedMetricsResponse> {
+    const res = await fetch(`/api/federated/round`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) throw new Error("Failed to advance federated training round");
+    return res.json();
+  },
+
+  // POST /api/federated/reset
+  async resetFederatedRounds(): Promise<FederatedMetricsResponse> {
+    const res = await fetch(`/api/federated/reset`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) throw new Error("Failed to reset federated training rounds");
+    return res.json();
   },
 };

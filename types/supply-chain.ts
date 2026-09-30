@@ -153,6 +153,45 @@ export interface SupplyAlert {
   timestamp: string;
 }
 
+export interface FederatedNodeMetric {
+  state: 'Madhya Pradesh' | 'Maharashtra' | 'Kerala' | 'Assam' | string;
+  state_code: string;
+  phc_count: number;
+  last_round: number;
+  mape_local_only: number;
+  mape_federated: number;
+  pattern_note: string;
+  insight: string;
+}
+
+export interface FederatedHistoryPoint {
+  round: number;
+  mape_by_state: {
+    'Madhya Pradesh': number;
+    'Maharashtra': number;
+    'Kerala': number;
+    'Assam': number;
+    [key: string]: number;
+  };
+  mape_baseline_by_state: {
+    'Madhya Pradesh': number;
+    'Maharashtra': number;
+    'Kerala': number;
+    'Assam': number;
+    [key: string]: number;
+  };
+}
+
+export interface FederatedMetricsResponse {
+  current_round: number;
+  total_rounds: number;
+  nodes: FederatedNodeMetric[];
+  history: FederatedHistoryPoint[];
+  shared_items: string[];
+  never_shared_items: string[];
+  is_simulation: boolean;
+}
+
 export interface FederatedMetrics {
   current_round: number;
   last_aggregation_timestamp: string;
