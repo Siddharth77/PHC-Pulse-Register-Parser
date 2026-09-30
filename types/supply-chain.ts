@@ -214,3 +214,59 @@ export interface ChatMessage {
   timestamp: string;
   isScenarioProjected?: boolean;
 }
+
+export interface StockItemReport {
+  medicine: string;
+  quantity: number | null;
+  unit: string | null;
+  expiry_date: string | null;
+  raw_text: string;
+  confidence: number;
+  needs_review: boolean;
+  ambiguous_date_options?: string[];
+  is_checked?: boolean;
+}
+
+export interface ParseRegisterResult {
+  phc_id: string | null;
+  report_date: string | null;
+  stock: StockItemReport[];
+  beds_available: number | null;
+  staff_present: number | null;
+  warnings: string[];
+}
+
+export interface QueuedStockReport {
+  id: string;
+  idempotency_key: string;
+  phc_id: string;
+  phc_name: string;
+  timestamp: string;
+  status: 'Waiting' | 'Syncing' | 'Needs review' | 'Sent' | 'Failed';
+  input_type: 'photo' | 'voice' | 'text';
+  confirmed_rows?: StockItemReport[];
+  beds_available?: number | null;
+  staff_present?: number | null;
+  photo_blob?: string; // base64 or object url
+  audio_text?: string;
+  raw_text?: string;
+  error_message?: string;
+  warnings?: string[];
+}
+
+export interface StockReportSubmitPayload {
+  phc_id: string;
+  confirmed_rows: StockItemReport[];
+  beds_available?: number | null;
+  staff_present?: number | null;
+  timestamp: string;
+  idempotency_key: string;
+}
+
+export interface StockReportSubmitResponse {
+  status: 'success' | 'error';
+  report_id: string;
+  message?: string;
+  timestamp?: string;
+}
+

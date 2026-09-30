@@ -12,6 +12,9 @@ import {
   FederatedMetrics,
   AskQuestionParams,
   AskQuestionResponse,
+  ParseRegisterResult,
+  StockReportSubmitPayload,
+  StockReportSubmitResponse,
 } from '@/types/supply-chain';
 import {
   PHC_MASTERS,
@@ -344,6 +347,43 @@ export const ApiClient = {
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
       throw new Error(errJson.error || "Failed to query conversational agent");
+    }
+    return res.json();
+  },
+
+  // POST /parse
+  async parseRegister(params: {
+    text?: string;
+    imageBase64?: string;
+    imageMimeType?: string;
+    audioBase64?: string;
+    audioMimeType?: string;
+    phc_id?: string;
+    language?: string;
+    mock_preset?: 'clean' | 'review_ambiguous' | 'error' | 'mock_smart';
+  }): Promise<ParseRegisterResult> {
+    const res = await fetch(`/api/parse`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.error || "Failed to parse register input");
+    }
+    return res.json();
+  },
+
+  // POST /report
+  async submitStockReport(payload: StockReportSubmitPayload): Promise<StockReportSubmitResponse> {
+    const res = await fetch(`/api/report`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.error || "Failed to submit stock report");
     }
     return res.json();
   },

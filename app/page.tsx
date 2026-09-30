@@ -10,6 +10,7 @@ import { CommandDashboard } from '@/components/dashboard/CommandDashboard';
 import { AlertsPage } from '@/components/alerts/AlertsPage';
 import { RedistributionPlannerPage } from '@/components/redistribution/RedistributionPlannerPage';
 import { AskPulsePage } from '@/components/chat/AskPulsePage';
+import { ReportStockPage } from '@/components/report/ReportStockPage';
 import { OutbreakScenarioResult, PhcMaster, SnapshotRecord, SupplyAlert } from '@/types/supply-chain';
 import {
   Sparkles,
@@ -179,25 +180,13 @@ export default function AppShell() {
               />
             )}
 
-            {/* Stage 5 Placeholder: Report Stock */}
+            {/* View 5: Report Stock (Stage 5 Phone-First for PHC Staff) */}
             {activeView === 'report' && (
-              <div className="p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-center max-w-2xl mx-auto my-8">
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">
-                  Stage 5 · Up Next
-                </span>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-1">
-                  Report Stock (Phone-First for PHC Staff)
-                </h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                  Three simple options: Photo of register, Voice note dispatch, or Quick text entry with offline synchronization.
-                </p>
-                <button
-                  onClick={() => setActiveView('dashboard')}
-                  className="mt-6 px-4 py-2 rounded-xl bg-teal-600 text-white font-bold text-xs min-h-[44px]"
-                >
-                  Return to Stage 1 Dashboard
-                </button>
-              </div>
+              <ReportStockPage
+                currentLanguage={currentLanguage}
+                currentRole={currentRole}
+                onNavigateToDashboard={() => setActiveView('dashboard')}
+              />
             )}
 
             {/* Stage 6 Placeholder: Federated Network */}
