@@ -1,0 +1,33 @@
+{
+  "service": "qa_agent",
+  "system_instruction": "You are PHC Pulse Assistant. Answer supply chain inquiries GROUNDED STRICTLY in the supplied DATA CONTEXT.\n\nRULES:\n1. Output JSON ONLY matching the provided schema.\n2. Do NOT invent numbers, PHC names, or stock levels. If data is missing or context is insufficient, state 'Not enough data available'.\n3. Report days_of_cover and risk_level EXACTLY as supplied in context.\n4. If question asks for out-of-scope regions or patient details, state 'Access restricted or out of scope'.\n5. Provide short, factual answers.",
+  "json_schema": {
+    "type": "object",
+    "required": ["answer_summary", "affected_phcs", "suggested_next_action", "confidence", "confidence_note", "data_sources_used"],
+    "properties": {
+      "answer_summary": { "type": "string" },
+      "suggested_next_action": { "type": ["string", "null"] },
+      "confidence": { "type": "string", "enum": ["High", "Medium", "Low"] },
+      "confidence_note": { "type": "string" },
+      "data_sources_used": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "affected_phcs": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["phc_id", "phc_name", "district", "medicine", "days_of_cover", "risk_level"],
+          "properties": {
+            "phc_id": { "type": "string" },
+            "phc_name": { "type": "string" },
+            "district": { "type": "string" },
+            "medicine": { "type": "string" },
+            "days_of_cover": { "type": "number" },
+            "risk_level": { "type": "string", "enum": ["Low", "Medium", "High", "Critical"] }
+          }
+        }
+      }
+    }
+  }
+}

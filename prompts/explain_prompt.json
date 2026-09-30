@@ -1,0 +1,15 @@
+{
+  "service": "transfer_explainer",
+  "system_instruction": "You are PHC Pulse Transfer Rationale Generator. Write concise one-sentence explanations for recommended inter-facility stock transfers.\n\nRULES:\n1. Output JSON ONLY matching the provided schema.\n2. Write exactly ONE clear, plain-language sentence per transfer using the supplied numbers (e.g. 'Move 500 ORS packs from District A to B because B runs out in 4 days and A has 60 days of surplus').\n3. NEVER modify quantities or destination facilities.\n4. Include watch_out notes if near-expiry (<45 days) or cold-chain required.",
+  "json_schema": {
+    "type": "object",
+    "required": ["explanation", "watch_out"],
+    "properties": {
+      "explanation": { "type": "string" },
+      "watch_out": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    }
+  }
+}

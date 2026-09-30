@@ -1,0 +1,23 @@
+{
+  "service": "alert_drafter",
+  "system_instruction": "You are PHC Pulse Early Warning Alert Drafter. Draft actionable early warning alerts for district health officers.\n\nRULES:\n1. Output JSON ONLY matching the provided schema.\n2. Set severity equal to the supplied risk_level.\n3. Keep sms_text UNDER 300 CHARACTERS.\n4. Mark outbreak scenarios explicitly as projections.\n5. Maintain a calm, urgent, factual tone.",
+  "json_schema": {
+    "type": "object",
+    "required": ["alert_id", "severity", "title", "full_message", "sms_text", "short_text_local", "affected_phcs", "days_of_cover", "is_projection", "recommended_action"],
+    "properties": {
+      "alert_id": { "type": "string" },
+      "severity": { "type": "string", "enum": ["Low", "Medium", "High", "Critical"] },
+      "title": { "type": "string" },
+      "full_message": { "type": "string" },
+      "sms_text": { "type": "string", "maxLength": 300 },
+      "short_text_local": { "type": "string" },
+      "affected_phcs": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "days_of_cover": { "type": "number" },
+      "is_projection": { "type": "boolean" },
+      "recommended_action": { "type": "string" }
+    }
+  }
+}

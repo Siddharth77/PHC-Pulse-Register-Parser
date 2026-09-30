@@ -81,3 +81,96 @@ class ErrorResponse(BaseModel):
     message: str
     timestamp: str
     details: Optional[List[str]] = None
+
+class ParseStockRow(BaseModel):
+    medicine: str
+    quantity: Optional[float] = None
+    unit: Optional[str] = None
+    expiry_date: Optional[str] = None
+    raw_text: str
+    confidence: float
+    needs_review: bool
+
+class ParseResponse(BaseModel):
+    phc_id: Optional[str] = None
+    report_date: Optional[str] = None
+    stock: List[ParseStockRow]
+    beds_available: Optional[int] = None
+    staff_present: Optional[int] = None
+    warnings: List[str]
+
+class ScopeParam(BaseModel):
+    states: Optional[List[str]] = None
+    districts: Optional[List[str]] = None
+
+class AskRequest(BaseModel):
+    question: str
+    role: UserRole
+    scope: Optional[ScopeParam] = None
+    language: Optional[str] = "en"
+
+class AffectedPhcSummary(BaseModel):
+    phc_id: str
+    phc_name: str
+    district: str
+    medicine: str
+    days_of_cover: float
+    risk_level: RiskLevel
+
+class AskResponse(BaseModel):
+    answer_summary: str
+    affected_phcs: List[AffectedPhcSummary]
+    suggested_next_action: Optional[str] = None
+    confidence: str
+    confidence_note: str
+    data_sources_used: List[str]
+
+class AlertDraftRequest(BaseModel):
+    phc_id: str
+    medicine: str
+    trigger: Optional[str] = None
+    language: Optional[str] = "en"
+
+class Alert(BaseModel):
+    alert_id: str
+    severity: RiskLevel
+    title: str
+    full_message: str
+    sms_text: str
+    short_text_local: str
+    affected_phcs: List[str]
+    days_of_cover: float
+    is_projection: bool
+    recommended_action: str
+
+class Transfer(BaseModel):
+    transfer_id: str
+    from_phc: str
+    to_phc: str
+    item: str
+    quantity: float
+    unit: str
+    distance_km: float
+    urgency: RiskLevel
+    explanation: str
+    watch_out: List[str]
+    source_days_of_cover_before: float
+    source_days_of_cover_after: float
+    dest_days_of_cover_before: float
+    dest_days_of_cover_after: float
+    nearest_expiry: str
+    cold_chain: bool
+    status: TransferStatus
+
+class Plan(BaseModel):
+    plan_id: str
+    generated_at: str
+    transfers: List[Transfer]
+    plan_summary: str
+    estimated_stockout_days_avoided: float
+    data_issues: List[str]
+
+class PlanRequest(BaseModel):
+    scope: Optional[ScopeParam] = None
+    scenario: Optional[Dict[str, Any]] = None
+

@@ -1,0 +1,34 @@
+{
+  "service": "parser",
+  "system_instruction": "You are PHC Pulse Register Parser. Extract medicine stock rows, vacant beds, and on-duty staff count from physical register photos, voice transcripts, or messy text in English, Hindi, Marathi, Malayalam, or Assamese.\n\nRULES:\n1. Output JSON ONLY matching the provided schema.\n2. Ignore patient names, diagnoses, or individual medical history.\n3. Return null for missing fields.\n4. Set needs_review=true if confidence < 0.8 or date is ambiguous.\n5. Keep raw_text verbatim.",
+  "json_schema": {
+    "type": "object",
+    "required": ["phc_id", "report_date", "stock", "beds_available", "staff_present", "warnings"],
+    "properties": {
+      "phc_id": { "type": ["string", "null"] },
+      "report_date": { "type": ["string", "null"] },
+      "beds_available": { "type": ["integer", "null"] },
+      "staff_present": { "type": ["integer", "null"] },
+      "warnings": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "stock": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["medicine", "quantity", "unit", "expiry_date", "raw_text", "confidence", "needs_review"],
+          "properties": {
+            "medicine": { "type": "string" },
+            "quantity": { "type": ["number", "null"] },
+            "unit": { "type": ["string", "null"] },
+            "expiry_date": { "type": ["string", "null"] },
+            "raw_text": { "type": "string" },
+            "confidence": { "type": "number" },
+            "needs_review": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  }
+}
